@@ -1,0 +1,40 @@
+{
+  "name": "express-version-router",
+  "version": "0.1.0",
+  "description": "A router for express that manages api versioning.",
+  "license": "Apache-2.0",
+  "author": "Ravi Gairola <mallox@pyxzl.net>",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mallocator/express-version-router.git"
+  },
+  "keywords": [
+    "express",
+    "router",
+    "version"
+  ],
+  "bugs": {
+    "url": "https://github.com/mallocator/express-version-router/issues",
+    "email": "mallox@pyxzl.net"
+  },
+  "homepage": "https://github.com/mallocator/express-version-router#readme",
+  "engine": {
+    "node": ">=6.3"
+  },
+  "peerDependencies": {
+    "express": "^4"
+  },
+  "devDependencies": {
+    "chai": "^3",
+    "coveralls": "^2",
+    "express": "^4",
+    "istanbul": "^0.4",
+    "mocha": "^2",
+    "supertest": "^1"
+  },
+  "scripts": {
+    "test": "istanbul cover _mocha -- --recursive",
+    "test-travis": "istanbul cover _mocha --report lcovonly -- -R spec --recursive"
+  }
+}
