@@ -114,4 +114,37 @@ describe('Router', () => {
             request(app).get('/v1.1.1/test').expect(200, 'success').end(done);
         });
     });
+
+    it('should be able to support matching an array of all describe methods', done => {
+        var router = Router();
+        router.get('/test', ['^1', 2, /3|4/], (req, res) => res.end('success'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/v1/test').expect(200, 'success').end(() => {
+            request(app).get('/v2/test').expect(200, 'success').end(() => {
+                request(app).get('/v3/test').expect(200, 'success').end(() => {
+                    request(app).get('/v4/test').expect(200, 'success').end(done);
+                });
+            });
+        });
+    });
+
+    it('should be able to handle a regex path', done => {
+        var router = Router();
+        router.get(/\/test/, 1, (req, res) => res.end('success'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/test?v=1').expect(200, 'success').end(done);
+    });
+
+    it('should be able to process multiple handlers', done => {
+        var router = Router();
+        router.get(/\/test/, 1, (req, res, next) => next(), (req, res) => res.end('success'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/test?v=1').expect(200, 'success').end(done);
+    });
 });

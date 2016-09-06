@@ -4,8 +4,9 @@ var semver = require('semver');
 
 /**
  * @typedef {Object} RouterConfig
+ * @property {boolean} [passVersion=true]           A flag that sets whether to have the version be available on the request object
  * @property {versionCb} [validate]                 A validator the overrides the default behavior for checking the version
- * @property {string} [param=v]                     The parameter name used for determinging the version
+ * @property {string} [param=v]                     The parameter name used for determining the version
  * @property {string} [header=X-ApiVersion]         The header name to look for the requested version
  * @property {string} [responseHeader=X-ApiVersion] The header name to return the resolved version (is a regex|number|string
  *                                                  depending on what was configured on the endpoint). Will not be used
@@ -23,10 +24,10 @@ var semver = require('semver');
 
 /**
  * @callback versionCb
- * @param {string} incomingVersion              The version that has been parsed off of the incoming request
- * @param {string|number|RegExp} acceptVersion  The version that this endpoint is accepting
- * @param {versionResponseCb} cb                A callback that lets the router know whether the version should be
- *                                              handled by this handler or not.
+ * @param {string} incomingVersion                      The version that has been parsed off of the incoming request
+ * @param {string[]|number[]|RegExp[]} acceptVersion    The version that this endpoint is accepting
+ * @param {versionResponseCb} cb                        A callback that lets the router know whether the version should be
+ *                                                      handled by this handler or not.
  * @property {ClientRequest} req    The http request object
  * @property {ServerResponse} res   The http response object
  */
@@ -49,7 +50,8 @@ var methods = [
 const defaultConfig = {
     param: 'v',
     header: 'X-ApiVersion',
-    responseHeader: 'X-ApiVersion'
+    responseHeader: 'X-ApiVersion',
+    passVersion: true
 };
 
 // TODO support use, param and route?
@@ -66,20 +68,24 @@ function Router(configuration = {}) {
     for (let method of methods) {
         let original = router[method];
         router[method] = (endpoint, version, ...handlers) => {
-            if (endpoint.startsWith('/v:'+ configuration.param)) {
+            if (endpoint.toString().startsWith('/v:'+ configuration.param)) {
                 throw new Error('Versioned paths will be generated automatically, please avoid prefixing paths');
             }
             let methodRouter = getRouter(endpoint);
             if (typeof version == 'function') {
                 handlers.unshift(version);
-                version = null;
+                version = [];
+            } else {
+                version = Array.isArray(version) ? version : [version];
             }
-            methodRouter[method]('/v:' + configuration.param + endpoint, ...handlers);
-            original.call(router, '/v:' + configuration.param + endpoint, parseVersion.bind({
-                configuration,
-                acceptVersion: version,
-                router: methodRouter
-            }));
+            if (!(endpoint instanceof RegExp)) {
+                methodRouter[method]('/v:' + configuration.param + endpoint, ...handlers);
+                original.call(router, '/v:' + configuration.param + endpoint, parseVersion.bind({
+                    configuration,
+                    acceptVersion: version,
+                    router: methodRouter
+                }));
+            }
             methodRouter[method](endpoint, ...handlers);
             original.call(router, endpoint, parseVersion.bind({
                 configuration,
@@ -132,6 +138,10 @@ function parseVersion(req, res, next) {
     let validator = (this.configuration.validate || validateVersion).bind({ req, res });
     validator(version, this.acceptVersion, matches => {
         if (matches){
+            if (this.configuration.passVersion) {
+                req.incomingVersion = version;
+                req.acceptedVersion = this.acceptedVersion;
+            }
             if (this.acceptVersion && !res.headersSent && this.configuration.responseHeader) {
                 res.set(this.configuration.responseHeader, this.acceptVersion.toString());
             }
@@ -145,24 +155,27 @@ function parseVersion(req, res, next) {
  * The default version validator that will match the incoming version against the acceptable version for various types.
  * @type versionCb
  */
-function validateVersion(incomingVersion, acceptVersion, cb) {
-    let acceptRequest = false;
-    switch (typeof acceptVersion) {
-        case 'string':
-            incomingVersion = semverizeVersion(incomingVersion);
-            acceptRequest = semver.satisfies(incomingVersion, acceptVersion);
-            break;
-        case 'number':
-            acceptRequest = acceptVersion == incomingVersion;
-            break;
-        case 'object':
-            if (acceptVersion instanceof RegExp) {
-                acceptRequest = acceptVersion.test(incomingVersion);
+function validateVersion(incomingVersion, acceptVersions, cb) {
+    let acceptRequest = true;
+    for (let acceptVersion of acceptVersions) {
+        acceptRequest = false;
+        switch (typeof acceptVersion) {
+            case 'string':
+                incomingVersion = semverizeVersion(incomingVersion);
+                acceptRequest = semver.satisfies(incomingVersion, acceptVersion);
                 break;
-            }
-        //noinspection FallThroughInSwitchStatementJS
-        default:
-            acceptRequest = true;
+            case 'number':
+                acceptRequest = acceptVersion == incomingVersion;
+                break;
+            case 'object':
+                if (acceptVersion instanceof RegExp) {
+                    acceptRequest = acceptVersion.test(incomingVersion);
+                    break;
+                }
+        }
+        if (acceptRequest) {
+            return cb(true);
+        }
     }
     cb(acceptRequest);
 }
