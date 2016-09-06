@@ -103,4 +103,15 @@ describe('Router', () => {
             request(app).get('/v1/test2').expect(200, 'success 2').end(done);
         });
     });
+
+    it('should be able to support semver matching for strings', done => {
+        var router = Router();
+        router.get('/test', '^1', (req, res) => res.end('success'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/v1.0/test').expect(200, 'success').end(() => {
+            request(app).get('/v1.1.1/test').expect(200, 'success').end(done);
+        });
+    });
 });

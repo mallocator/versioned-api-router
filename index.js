@@ -1,14 +1,18 @@
 var express = require('express');
+var semver = require('semver');
 
 
 /**
  * @typedef {Object} RouterConfig
- * @property {versionCb} [validate]             A validator the overrides the default behavior for checking the version
- * @property {string} [param=v]                 The parameter name used for determinging the version
- * @property {string} [header=X-ApiVersion]
- * @property {boolean} [caseSensitive=false]    Express router option to handle paths respecting case
- * @property {boolean} [mergeParams=false]      Express router option to preserve req.params from parent router
- * @property {boolean} [strict=false]           Express router option to not ignore trailing slashes on endpoints
+ * @property {versionCb} [validate]                 A validator the overrides the default behavior for checking the version
+ * @property {string} [param=v]                     The parameter name used for determinging the version
+ * @property {string} [header=X-ApiVersion]         The header name to look for the requested version
+ * @property {string} [responseHeader=X-ApiVersion] The header name to return the resolved version (is a regex|number|string
+ *                                                  depending on what was configured on the endpoint). Will not be used
+ *                                                  if the headers have already been sent before the router gets a chance.
+ * @property {boolean} [caseSensitive=false]        Express router option to handle paths respecting case
+ * @property {boolean} [mergeParams=false]          Express router option to preserve req.params from parent router
+ * @property {boolean} [strict=false]               Express router option to not ignore trailing slashes on endpoints
  */
 
 /**
@@ -34,7 +38,7 @@ var express = require('express');
 
 /**
  * All supported methods by the express router that need to be proxied.
- * @type {string[]} The method names
+ * @type {string[]} The method names                       npm
  */
 var methods = [
     'all', 'get', 'post', 'put', 'head', 'delete', 'options', 'trace', 'copy', 'lock', 'mkcol', 'move', 'purge',
@@ -44,7 +48,8 @@ var methods = [
 
 const defaultConfig = {
     param: 'v',
-    header: 'X-ApiVersion'
+    header: 'X-ApiVersion',
+    responseHeader: 'X-ApiVersion'
 };
 
 // TODO support use, param and route?
@@ -123,9 +128,17 @@ function parseVersion(req, res, next) {
     let version = req.query && req.query[this.configuration.param]
         || req.params && req.params[this.configuration.param]
         || req.cookies && req.cookies[this.configuration.param]
-        || req.get('X-ApiVersion');
+        || req.get(this.configuration.header);
     let validator = (this.configuration.validate || validateVersion).bind({ req, res });
-    validator(version, this.acceptVersion, matches => matches ? this.router.handle(req, res, next) : next());
+    validator(version, this.acceptVersion, matches => {
+        if (matches){
+            if (this.acceptVersion && !res.headersSent && this.configuration.responseHeader) {
+                res.set(this.configuration.responseHeader, this.acceptVersion.toString());
+            }
+            this.router.handle(req, res, next);
+        }
+        next()
+    });
 }
 
 /**
@@ -136,7 +149,8 @@ function validateVersion(incomingVersion, acceptVersion, cb) {
     let acceptRequest = false;
     switch (typeof acceptVersion) {
         case 'string':
-            acceptRequest = incomingVersion.match(acceptVersion);
+            incomingVersion = semverizeVersion(incomingVersion);
+            acceptRequest = semver.satisfies(incomingVersion, acceptVersion);
             break;
         case 'number':
             acceptRequest = acceptVersion == incomingVersion;
@@ -151,6 +165,24 @@ function validateVersion(incomingVersion, acceptVersion, cb) {
             acceptRequest = true;
     }
     cb(acceptRequest);
+}
+
+/**
+ * This function tries to convert an incoming version into something that semver might understand.
+ * @param {string} version
+ * @returns {string}
+ */
+function semverizeVersion(version) {
+    version = '' + version;
+    let splitVersion = version.split('.');
+    switch(splitVersion.length) {
+        case 1:
+            return version + '.0.0';
+        case 2:
+            return splitVersion.join('.') + '.0';
+        default:
+            return version;
+    }
 }
 
 module.exports = Router;

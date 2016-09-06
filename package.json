@@ -36,5 +36,8 @@
   "scripts": {
     "test": "istanbul cover _mocha -- --recursive",
     "test-travis": "istanbul cover _mocha --report lcovonly -- -R spec --recursive"
+  },
+  "dependencies": {
+    "semver": "^5.3.0"
   }
 }
