@@ -3,7 +3,6 @@ var express = require('express');
 
 /**
  * @typedef {Object} RouterConfig
- * @property {versionCb} [error]                An error handler that overrides the default behavior
  * @property {versionCb} [validate]             A validator the overrides the default behavior for checking the version
  * @property {string} [param=v]                 The parameter name used for determinging the version
  * @property {string} [header=X-ApiVersion]
@@ -13,11 +12,24 @@ var express = require('express');
  */
 
 /**
+ * @typedef {Object} RouterMapping
+ * @property {string[]} paths   All the paths that have been mapped to this router so far
+ * @property {Router} instance  The router instance that handles the actual requests
+ */
+
+/**
  * @callback versionCb
- * @param {string|number} value The parsed version form the request
- * @param {ClientRequest} req   The http request object
- * @param {ServerResponse} res  The http response object
- * @param {function} next       The chaining function that allows other handlers to be executed after this one
+ * @param {string} incomingVersion              The version that has been parsed off of the incoming request
+ * @param {string|number|RegExp} acceptVersion  The version that this endpoint is accepting
+ * @param {versionResponseCb} cb                A callback that lets the router know whether the version should be
+ *                                              handled by this handler or not.
+ * @property {ClientRequest} req    The http request object
+ * @property {ServerResponse} res   The http response object
+ */
+
+/**
+ * @callback versionResponseCb
+ * @param {boolean} match   Signal whether the version is a match or not.
  */
 
 /**
@@ -30,6 +42,11 @@ var methods = [
     'subscribe', 'unsubscribe', 'patch', 'search', 'connect'
 ];
 
+const defaultConfig = {
+    param: 'v',
+    header: 'X-ApiVersion'
+};
+
 // TODO support use, param and route?
 
 /**
@@ -38,12 +55,13 @@ var methods = [
  * @returns {*} The middleware function that can be used by app.use()
  */
 function Router(configuration = {}) {
+    configuration = Object.assign({}, defaultConfig, configuration);
     let router = express.Router(configuration);
     let getRouter = generateRouter.bind({routers: [], configuration});
     for (let method of methods) {
         let original = router[method];
         router[method] = (endpoint, version, ...handlers) => {
-            if (endpoint.startsWith('/v:v')) {
+            if (endpoint.startsWith('/v:'+ configuration.param)) {
                 throw new Error('Versioned paths will be generated automatically, please avoid prefixing paths');
             }
             let methodRouter = getRouter(endpoint);
@@ -51,13 +69,15 @@ function Router(configuration = {}) {
                 handlers.unshift(version);
                 version = null;
             }
-            methodRouter[method]('/v:v' + endpoint, ...handlers);
-            original.call(router, '/v:v' + endpoint, parseVersion.bind({
+            methodRouter[method]('/v:' + configuration.param + endpoint, ...handlers);
+            original.call(router, '/v:' + configuration.param + endpoint, parseVersion.bind({
+                configuration,
                 acceptVersion: version,
                 router: methodRouter
             }));
             methodRouter[method](endpoint, ...handlers);
             original.call(router, endpoint, parseVersion.bind({
+                configuration,
                 acceptVersion: version,
                 router: methodRouter
             }));
@@ -72,13 +92,12 @@ function Router(configuration = {}) {
  * router assigned already and returns that one. If all routers are already using the given route, a new router is
  * returned.
  * @param {string|RegExp} endpoint  The endpoint for which we want a router
- * @property {Router[]} routers             The list of existing routers
+ * @property {RouterMapping[]} routers      The list of existing routers
  * @property {RouterConfig} configuration   The router configuration for all generated routers.
  * @returns {Router}
  */
 function generateRouter(endpoint) {
     for (let router of this.routers) {
-        console.log(router.paths, endpoint)
         if (router.paths.indexOf(endpoint) == -1) {
             router.paths.push(endpoint);
             return router.instance;
@@ -101,29 +120,37 @@ function generateRouter(endpoint) {
  * @property {string|number|RegExp} acceptVersion
  */
 function parseVersion(req, res, next) {
-    let version = req.query['v'] || req.params['v'] || req.get('X-ApiVersion');
+    let version = req.query && req.query[this.configuration.param]
+        || req.params && req.params[this.configuration.param]
+        || req.cookies && req.cookies[this.configuration.param]
+        || req.get('X-ApiVersion');
+    let validator = (this.configuration.validate || validateVersion).bind({ req, res });
+    validator(version, this.acceptVersion, matches => matches ? this.router.handle(req, res, next) : next());
+}
+
+/**
+ * The default version validator that will match the incoming version against the acceptable version for various types.
+ * @type versionCb
+ */
+function validateVersion(incomingVersion, acceptVersion, cb) {
     let acceptRequest = false;
-    switch (typeof this.acceptVersion) {
+    switch (typeof acceptVersion) {
         case 'string':
-            acceptRequest = version.match(this.acceptVersion);
+            acceptRequest = incomingVersion.match(acceptVersion);
             break;
         case 'number':
-            acceptRequest = this.acceptVersion == version;
+            acceptRequest = acceptVersion == incomingVersion;
             break;
         case 'object':
-            if (this.acceptVersion instanceof RegExp) {
-                acceptRequest = this.acceptVersion.test(version);
+            if (acceptVersion instanceof RegExp) {
+                acceptRequest = acceptVersion.test(incomingVersion);
                 break;
             }
         //noinspection FallThroughInSwitchStatementJS
         default:
             acceptRequest = true;
     }
-    if (acceptRequest) {
-        return this.router.handle(req, res, next);
-    } else {
-        next();
-    }
+    cb(acceptRequest);
 }
 
 module.exports = Router;
