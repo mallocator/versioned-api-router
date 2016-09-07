@@ -147,4 +147,16 @@ describe('Router', () => {
         app.use(router);
         request(app).get('/test?v=1').expect(200, 'success').end(done);
     });
+
+    it('should be able to support other request methods on the same path', done => {
+        var router = Router();
+        router.get('/test', 1, (req, res, next) => next(), (req, res) => res.end('success get'));
+        router.post('/test', 1, (req, res, next) => next(), (req, res) => res.end('success post'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/test?v=1').expect(200, 'success get').end(() => {
+            request(app).post('/test?v=1').expect(200, 'success post').end(done);
+        });
+    });
 });

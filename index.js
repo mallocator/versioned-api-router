@@ -18,8 +18,8 @@ var semver = require('semver');
 
 /**
  * @typedef {Object} RouterMapping
- * @property {string[]} paths   All the paths that have been mapped to this router so far
- * @property {Router} instance  The router instance that handles the actual requests
+ * @property {Object<string, string[]>} paths   All the paths that have been mapped to this router so far for each method
+ * @property {Router} instance                  The router instance that handles the actual requests
  */
 
 /**
@@ -71,7 +71,7 @@ function Router(configuration = {}) {
             if (endpoint.toString().startsWith('/v:'+ configuration.param)) {
                 throw new Error('Versioned paths will be generated automatically, please avoid prefixing paths');
             }
-            let methodRouter = getRouter(endpoint);
+            let methodRouter = getRouter(endpoint, method);
             if (typeof version == 'function') {
                 handlers.unshift(version);
                 version = [];
@@ -103,20 +103,24 @@ function Router(configuration = {}) {
  * router assigned already and returns that one. If all routers are already using the given route, a new router is
  * returned.
  * @param {string|RegExp} endpoint  The endpoint for which we want a router
+ * @param {string} method           The http method we want to use
  * @property {RouterMapping[]} routers      The list of existing routers
  * @property {RouterConfig} configuration   The router configuration for all generated routers.
  * @returns {Router}
  */
-function generateRouter(endpoint) {
+function generateRouter(endpoint, method) {
     for (let router of this.routers) {
-        if (router.paths.indexOf(endpoint) == -1) {
-            router.paths.push(endpoint);
+        if (!router.paths[method]) {
+            router.paths[method] = [];
+        }
+        if (router.paths[method].indexOf(endpoint) == -1) {
+            router.paths[method].push(endpoint);
             return router.instance;
         }
     }
     let router = express.Router(this.configuration);
     this.routers.push({
-        paths: [ endpoint ],
+        paths: { [method]: [ endpoint ] },
         instance: router
     });
     return router;
