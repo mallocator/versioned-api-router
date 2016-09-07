@@ -94,6 +94,13 @@ function Router(configuration = {}) {
             }));
         }
     }
+    let originalParam = router.param;
+    router.param = (name, version, cb) => {
+        throw new Error('Not yet implemented');
+    };
+    router.use = (path, version, ...handlers) => {
+        throw new Error('Not yet implemented');
+    };
     return router;
 }
 

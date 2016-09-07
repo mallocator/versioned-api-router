@@ -120,6 +120,15 @@ req.incomingVersion - The version that came in on the request
 req.acceptedVersion - The version that the handler has been configured to accept
 
 
+### Router.route
+```
+router.route(path, [version])
+```
+
+Works the same way as the original router method, only now has an optional version parameter that works the same way
+as the version parameter on the individual methods.
+
+
 ### Router.param
 ```
 router.param(name, [version], callback)
@@ -134,11 +143,3 @@ router.use([path], [version], [function, ...] function)
 ```
 
 Not yet implemented.
-
-
-### Router.route
-```
-router.route(path, [version])
-```
-
-Will probably not be implemented. Instead make use of individual functions for the different request methods.

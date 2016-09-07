@@ -148,15 +148,55 @@ describe('Router', () => {
         request(app).get('/test?v=1').expect(200, 'success').end(done);
     });
 
-    it('should be able to support other request methods on the same path', done => {
+    it('should still support standard routing for multiple path definitions', done => {
         var router = Router();
-        router.get('/test', 1, (req, res, next) => next(), (req, res) => res.end('success get'));
-        router.post('/test', 1, (req, res, next) => next(), (req, res) => res.end('success post'));
+        router.get('/test', 1, (req, res, next) => next());
+        router.get('/test', 1, (req, res) => res.end('success'));
 
         var app = express();
         app.use(router);
-        request(app).get('/test?v=1').expect(200, 'success get').end(() => {
-            request(app).post('/test?v=1').expect(200, 'success post').end(done);
+        request(app).get('/test?v=1').expect(200, 'success').end(done);
+    });
+
+    it('should be able to support other request methods on the same path', done => {
+        var router = Router();
+        router.get('/test', 1, (req, res) => res.end('success get'));
+        router.post('/test', 1, (req, res) => res.end('success post'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/test').expect(404).end(() => {
+            request(app).get('/test?v=1').expect(200, 'success get').end(() => {
+                request(app).post('/test?v=1').expect(200, 'success post').end(done);
+            });
+        });
+    });
+
+    it('should support the standard route method', done => {
+        var router = Router();
+        router.route('/test')
+            .get((req, res) => res.end('success get'))
+            .post((req, res) => res.end('success post'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/test').expect(200, 'success get').end(() => {
+            request(app).post('/test').expect(200, 'success post').end(done);
+        });
+    });
+
+    it('should support the route method with version', done => {
+        var router = Router();
+        router.route('/test', 1)
+            .get((req, res) => res.end('success get'))
+            .post((req, res) => res.end('success post'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/test').expect(404).end(() => {
+            request(app).get('/test?v=1').expect(200, 'success get').end(() => {
+                request(app).post('/test?v=1').expect(200, 'success post').end(done);
+            });
         });
     });
 });
