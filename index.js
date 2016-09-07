@@ -8,6 +8,9 @@ var semver = require('semver');
  * @property {versionCb} [validate]                 A validator the overrides the default behavior for checking the version
  * @property {string} [param=v]                     The parameter name used for determining the version
  * @property {string} [header=X-ApiVersion]         The header name to look for the requested version
+ * @property {string[]} paramOrder                  The order in which parameters are parsed from the client object for all endpoints
+ *                                                  The default order is 'params', 'query', 'cookie', 'body' which map to express
+ *                                                  properties. Note that if a header is set it is used instead of any of these.
  * @property {string} [responseHeader=X-ApiVersion] The header name to return the resolved version (is a regex|number|string
  *                                                  depending on what was configured on the endpoint). Will not be used
  *                                                  if the headers have already been sent before the router gets a chance.
@@ -42,12 +45,13 @@ var semver = require('semver');
  * @type {string[]} The method names                       npm
  */
 var methods = [
-    'all', 'get', 'post', 'put', 'head', 'delete', 'options', 'trace', 'copy', 'lock', 'mkcol', 'move', 'purge',
-    'propfind', 'proppatch', 'unlock', 'report', 'mkactivity', 'checkout', 'merge', 'm-search', 'notify',
+    'all', 'param', 'get', 'post', 'put', 'head', 'delete', 'options', 'trace', 'copy', 'lock', 'mkcol', 'move',
+    'purge', 'propfind', 'proppatch', 'unlock', 'report', 'mkactivity', 'checkout', 'merge', 'm-search', 'notify',
     'subscribe', 'unsubscribe', 'patch', 'search', 'connect'
 ];
 
 const defaultConfig = {
+    paramOrder: ['params', 'query', 'cookie', 'body', 'header'],
     param: 'v',
     header: 'X-ApiVersion',
     responseHeader: 'X-ApiVersion',
@@ -94,10 +98,6 @@ function Router(configuration = {}) {
             }));
         }
     }
-    let originalParam = router.param;
-    router.param = (name, version, cb) => {
-        throw new Error('Not yet implemented');
-    };
     router.use = (path, version, ...handlers) => {
         throw new Error('Not yet implemented');
     };
@@ -142,10 +142,14 @@ function generateRouter(endpoint, method) {
  * @property {string|number|RegExp} acceptVersion
  */
 function parseVersion(req, res, next) {
-    let version = req.query && req.query[this.configuration.param]
-        || req.params && req.params[this.configuration.param]
-        || req.cookies && req.cookies[this.configuration.param]
-        || req.get(this.configuration.header);
+    let version = null;
+    for (let params of this.configuration.paramOrder) {
+        if (params == 'header') {
+            version = version || req.get(this.configuration.header);;
+        } else {
+            version = version || req[params] && req[params][this.configuration.param];
+        }
+    }
     let validator = (this.configuration.validate || validateVersion).bind({ req, res });
     validator(version, this.acceptVersion, matches => {
         if (matches){

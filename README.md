@@ -90,6 +90,7 @@ In addition the router has options specifically for the version mapping:
 
 * param: the parameter name that is used in query and parameter mapping
 * header: the header used to look for a requested version
+* paramOrder: the order in which parameters are parsed from the client object for all endpoints, the default order is 'params', 'query', 'cookie', 'body', 'header' which map to express properties.
 * responseHeader: the name of the header in the response that has information about the matched version. (will be turned off if this is set to falsy)
 * passVersion: whether to pass the version on via the request object. this will add two new properties to the request object: incomingVersion and acceptedVersion.
 
@@ -129,17 +130,17 @@ Works the same way as the original router method, only now has an optional versi
 as the version parameter on the individual methods.
 
 
-### Router.param
-```
-router.param(name, [version], callback)
-```
-
-Not yet implemented.
-
-
 ### Router.use 
 ```
 router.use([path], [version], [function, ...] function)
 ```
 
 Not yet implemented.
+                                                   
+
+### Router.param
+```
+router.param(name, callback)
+```
+
+This is the same as the original method. note that versioning is not supported at this time for the param call.

@@ -199,4 +199,71 @@ describe('Router', () => {
             });
         });
     });
+
+    it('should support the param method without a version', done => {
+        var router = Router();
+        router.param('variable', (req, res, next, variable) => res.end('success ' + variable));
+        router.get('/:variable', () => {});
+
+        var app = express();
+        app.use(router);
+        request(app).get('/test').expect(200, 'success test').end(done);
+    });
+
+    it.skip('should support middleware functions', done => {
+        var router = Router();
+        router.use((req, res, next) => next(), (req, res) => res.end('success'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/test').expect(200, 'success').end(done);
+    });
+
+    it.skip('should support middleware functions with a path', done => {
+        var router = Router();
+        router.use('/test', (req, res, next) => next(), (req, res) => res.end('success'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/test').expect(200, 'success').end(done);
+    });
+
+    it.skip('should support middleware functions with a version', done => {
+        var router = Router();
+        router.use(1, (req, res, next) => next(), (req, res) => res.end('success 1'));
+        router.use('^2', (req, res, next) => next(), (req, res) => res.end('success 2'));
+        router.use(/3/, (req, res, next) => next(), (req, res) => res.end('success 3'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/v1/test').expect(200, 'success 1').end(() => {
+            request(app).get('/test?v=2').expect(200, 'success 2').end(() => {
+                request(app).get('/test').set('X-ApiVersion', 3).expect(200, 'success 3').end(done);
+            });
+        });
+    });
+
+    it.skip('should support middleware functions with a path and version', done => {
+        var router = Router();
+        router.use('/test', 1, (req, res, next) => next(), (req, res) => res.end('success 1'));
+        router.use(/\/test/, 2, (req, res, next) => next(), (req, res) => res.end('success 2'));
+        router.use('/test', '^3', (req, res, next) => next(), (req, res) => res.end('success 3'));
+        router.use(/\/test/, '^4', (req, res, next) => next(), (req, res) => res.end('success 4'));
+        router.use('/test', /5/, (req, res, next) => next(), (req, res) => res.end('success 5'));
+        router.use(/\/test/, /6/, (req, res, next) => next(), (req, res) => res.end('success 6'));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/v1/test').expect(200, 'success 1').end(() => {
+            request(app).get('/test?v=2').expect(200, 'success 2').end(() => {
+                request(app).get('/test').set('X-ApiVersion', 3).expect(200, 'success 3').end(() => {
+                    request(app).get('/v4/test').expect(200, 'success 4').end(() => {
+                        request(app).get('/test?v=5').expect(200, 'success 5').end(() => {
+                            request(app).get('/test').set('X-ApiVersion', 6).expect(200, 'success 6').end(done);
+                        });
+                    });
+                });
+            });
+        });
+    });
 });
