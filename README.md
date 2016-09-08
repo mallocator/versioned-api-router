@@ -123,11 +123,10 @@ req.acceptedVersion - The version that the handler has been configured to accept
 
 ### Router.route
 ```
-router.route(path, [version])
+router.route(path)
 ```
 
-Works the same way as the original router method, only now has an optional version parameter that works the same way
-as the version parameter on the individual methods.
+This is the same as the original method. Note that versioning is not supported at this time for the param call.
 
 
 ### Router.use 
@@ -143,4 +142,4 @@ Not yet implemented.
 router.param(name, callback)
 ```
 
-This is the same as the original method. note that versioning is not supported at this time for the param call.
+This is the same as the original method. Note that versioning is not supported at this time for the param call.

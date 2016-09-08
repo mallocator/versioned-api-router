@@ -45,7 +45,7 @@ var semver = require('semver');
  * @type {string[]} The method names                       npm
  */
 var methods = [
-    'all', 'param', 'get', 'post', 'put', 'head', 'delete', 'options', 'trace', 'copy', 'lock', 'mkcol', 'move',
+    'all', 'use', 'param', 'get', 'post', 'put', 'head', 'delete', 'options', 'trace', 'copy', 'lock', 'mkcol', 'move',
     'purge', 'propfind', 'proppatch', 'unlock', 'report', 'mkactivity', 'checkout', 'merge', 'm-search', 'notify',
     'subscribe', 'unsubscribe', 'patch', 'search', 'connect'
 ];
@@ -71,36 +71,37 @@ function Router(configuration = {}) {
     let getRouter = generateRouter.bind({routers: [], configuration});
     for (let method of methods) {
         let original = router[method];
-        router[method] = (endpoint, version, ...handlers) => {
-            if (endpoint.toString().startsWith('/v:'+ configuration.param)) {
+        router[method] = (path, version, ...handlers) => {
+            if (path.toString().startsWith('/v:'+ configuration.param)) {
                 throw new Error('Versioned paths will be generated automatically, please avoid prefixing paths');
             }
-            let methodRouter = getRouter(endpoint, method);
+            let methodRouter = getRouter(path, method);
             if (typeof version == 'function') {
                 handlers.unshift(version);
                 version = [];
             } else {
                 version = Array.isArray(version) ? version : [version];
             }
-            if (!(endpoint instanceof RegExp)) {
-                methodRouter[method]('/v:' + configuration.param + endpoint, ...handlers);
-                original.call(router, '/v:' + configuration.param + endpoint, parseVersion.bind({
+            if (typeof path == 'function') {
+                handlers.unshift(path);
+                path = ''
+            }
+            if (!(path instanceof RegExp)) {
+                methodRouter[method]('/v:' + configuration.param + path, ...handlers);
+                original.call(router, '/v:' + configuration.param + path, parseVersion.bind({
                     configuration,
                     acceptVersion: version,
                     router: methodRouter
                 }));
             }
-            methodRouter[method](endpoint, ...handlers);
-            original.call(router, endpoint, parseVersion.bind({
+            methodRouter[method](path, ...handlers);
+            original.call(router, path, parseVersion.bind({
                 configuration,
                 acceptVersion: version,
                 router: methodRouter
             }));
         }
     }
-    router.use = (path, version, ...handlers) => {
-        throw new Error('Not yet implemented');
-    };
     return router;
 }
 
@@ -180,7 +181,7 @@ function validateVersion(incomingVersion, acceptVersions, cb) {
                 acceptRequest = semver.satisfies(incomingVersion, acceptVersion);
                 break;
             case 'number':
-                acceptRequest = acceptVersion == incomingVersion;
+                acceptRequest = acceptVersion == parseInt(incomingVersion);
                 break;
             case 'object':
                 if (acceptVersion instanceof RegExp) {

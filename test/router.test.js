@@ -1,6 +1,7 @@
 /* global describe, it, beforeEach, afterEach */
 'use strict';
 
+var async = require('async');
 var expect = require('chai').expect;
 var express = require('express');
 var request = require('supertest');
@@ -24,9 +25,10 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/test').expect(404).end(() => {
-            request(app).get('/v1/test').expect(200, 'success').end(done);
-        });
+        async.series([
+            cb => request(app).get('/test').expect(404).end(cb),
+            cb => request(app).get('/v1/test').expect(200, 'success').end(cb)
+        ], done);
     });
 
     it('should only process versioned requests using a header', done => {
@@ -35,9 +37,10 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/test').expect(404).end(() => {
-            request(app).get('/test').set('X-ApiVersion', 1).expect(200, 'success').end(done);
-        });
+        async.series([
+            cb => request(app).get('/test').expect(404).end(cb),
+            cb => request(app).get('/test').set('X-ApiVersion', 1).expect(200, 'success').end(cb)
+        ], done);
     });
 
     it('should only process versioned requests using a get parameter', done => {
@@ -46,9 +49,10 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/test').expect(404).end(() => {
-            request(app).get('/test?v=1').expect(200, 'success').end(done);
-        });
+        async.series([
+            cb => request(app).get('/test').expect(404).end(cb),
+            cb => request(app).get('/test?v=1').expect(200, 'success').end(cb)
+        ], done);
     });
 
     it('should prevent me from passing in a path that is already versioned', () => {
@@ -63,9 +67,10 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/v1/test').expect(200, 'success 1').end(() => {
-            request(app).get('/v2/test').expect(200, 'success 2').end(done);
-        });
+        async.series([
+            cb => request(app).get('/v1/test').expect(200, 'success 1').end(cb),
+            cb => request(app).get('/v2/test').expect(200, 'success 2').end(cb)
+        ], done);
     });
 
     it('should be able to support multiple versions for the same endpoint using strings', done => {
@@ -75,9 +80,10 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/v1/test').expect(200, 'success 1').end(() => {
-            request(app).get('/v2/test').expect(200, 'success 2').end(done);
-        });
+        async.series([
+            cb => request(app).get('/v1/test').expect(200, 'success 1').end(cb),
+            cb => request(app).get('/v2/test').expect(200, 'success 2').end(cb)
+        ], done);
     });
 
     it('should be able to support multiple versions for the same endpoint using RegExp', done => {
@@ -87,9 +93,10 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/v1/test').expect(200, 'success 1').end(() => {
-            request(app).get('/v2/test').expect(200, 'success 2').end(done);
-        });
+        async.series([
+            cb => request(app).get('/v1/test').expect(200, 'success 1').end(cb),
+            cb => request(app).get('/v2/test').expect(200, 'success 2').end(cb)
+        ], done);
     });
 
     it('should be able to support multiple paths for the same version', done => {
@@ -99,9 +106,10 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/v1/test1').expect(200, 'success 1').end(() => {
-            request(app).get('/v1/test2').expect(200, 'success 2').end(done);
-        });
+        async.series([
+            cb => request(app).get('/v1/test1').expect(200, 'success 1').end(cb),
+            cb => request(app).get('/v1/test2').expect(200, 'success 2').end(cb)
+        ], done);
     });
 
     it('should be able to support semver matching for strings', done => {
@@ -110,24 +118,24 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/v1.0/test').expect(200, 'success').end(() => {
-            request(app).get('/v1.1.1/test').expect(200, 'success').end(done);
-        });
+        async.series([
+            cb => request(app).get('/v1.0/test').expect(200, 'success').end(cb),
+            cb => request(app).get('/v1.1.1/test').expect(200, 'success').end(cb)
+        ], done);
     });
 
-    it('should be able to support matching an array of all describe methods', done => {
+    it('should be able to support matching an array of all described methods', done => {
         var router = Router();
-        router.get('/test', ['^1', 2, /3|4/], (req, res) => res.end('success'));
+        router.get('/test', ['^1', 2, /(3|4)/], (req, res) => res.end('success ' + req.incomingVersion));
 
         var app = express();
         app.use(router);
-        request(app).get('/v1/test').expect(200, 'success').end(() => {
-            request(app).get('/v2/test').expect(200, 'success').end(() => {
-                request(app).get('/v3/test').expect(200, 'success').end(() => {
-                    request(app).get('/v4/test').expect(200, 'success').end(done);
-                });
-            });
-        });
+        async.series([
+            cb => request(app).get('/v1/test').expect(200, 'success 1').end(cb),
+            cb => request(app).get('/v2/test').expect(200, 'success 2').end(cb),
+            cb => request(app).get('/v3/test').expect(200, 'success 3').end(cb),
+            cb => request(app).get('/v4/test').expect(200, 'success 4').end(cb)
+        ], done);
     });
 
     it('should be able to handle a regex path', done => {
@@ -165,39 +173,11 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/test').expect(404).end(() => {
-            request(app).get('/test?v=1').expect(200, 'success get').end(() => {
-                request(app).post('/test?v=1').expect(200, 'success post').end(done);
-            });
-        });
-    });
-
-    it('should support the standard route method', done => {
-        var router = Router();
-        router.route('/test')
-            .get((req, res) => res.end('success get'))
-            .post((req, res) => res.end('success post'));
-
-        var app = express();
-        app.use(router);
-        request(app).get('/test').expect(200, 'success get').end(() => {
-            request(app).post('/test').expect(200, 'success post').end(done);
-        });
-    });
-
-    it('should support the route method with version', done => {
-        var router = Router();
-        router.route('/test', 1)
-            .get((req, res) => res.end('success get'))
-            .post((req, res) => res.end('success post'));
-
-        var app = express();
-        app.use(router);
-        request(app).get('/test').expect(404).end(() => {
-            request(app).get('/test?v=1').expect(200, 'success get').end(() => {
-                request(app).post('/test?v=1').expect(200, 'success post').end(done);
-            });
-        });
+        async.series([
+            cb => request(app).get('/test').expect(404).end(cb),
+            cb => request(app).get('/test?v=1').expect(200, 'success get').end(cb),
+            cb => request(app).post('/test?v=1').expect(200, 'success post').end(cb)
+        ], done);
     });
 
     it('should support the param method without a version', done => {
@@ -210,7 +190,36 @@ describe('Router', () => {
         request(app).get('/test').expect(200, 'success test').end(done);
     });
 
-    it.skip('should support middleware functions', done => {
+    it('should support the standard route method', done => {
+        var router = Router();
+        router.route('/test')
+        .get((req, res) => res.end('success get'))
+        .post((req, res) => res.end('success post'));
+
+        var app = express();
+        app.use(router);
+        async.series([
+            cb => request(app).get('/test').expect(200, 'success get').end(cb),
+            cb => request(app).post('/test').expect(200, 'success post').end(cb)
+        ], done);
+    });
+
+    it.skip('should support the route method with version', done => {
+        var router = Router();
+        router.route('/test', 1)
+        .get((req, res) => res.end('success get'))
+        .post((req, res) => res.end('success post'));
+
+        var app = express();
+        app.use(router);
+        async.series([
+            cb => request(app).get('/test').expect(404).end(cb),
+            cb => request(app).get('/test?v=1').expect(200, 'success get').end(cb),
+            cb => request(app).post('/test?v=1').expect(200, 'success post').end(cb)
+        ], done);
+    });
+
+    it('should support middleware functions', done => {
         var router = Router();
         router.use((req, res, next) => next(), (req, res) => res.end('success'));
 
@@ -236,11 +245,11 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/v1/test').expect(200, 'success 1').end(() => {
-            request(app).get('/test?v=2').expect(200, 'success 2').end(() => {
-                request(app).get('/test').set('X-ApiVersion', 3).expect(200, 'success 3').end(done);
-            });
-        });
+        async.series([
+            cb => request(app).get('/v1/test').expect(200, 'success 1').end(cb),
+            cb => request(app).get('/test?v=2').expect(200, 'success 2').end(cb),
+            cb => request(app).get('/test').set('X-ApiVersion', 3).expect(200, 'success 3').end(cb)
+        ], done);
     });
 
     it.skip('should support middleware functions with a path and version', done => {
@@ -254,16 +263,13 @@ describe('Router', () => {
 
         var app = express();
         app.use(router);
-        request(app).get('/v1/test').expect(200, 'success 1').end(() => {
-            request(app).get('/test?v=2').expect(200, 'success 2').end(() => {
-                request(app).get('/test').set('X-ApiVersion', 3).expect(200, 'success 3').end(() => {
-                    request(app).get('/v4/test').expect(200, 'success 4').end(() => {
-                        request(app).get('/test?v=5').expect(200, 'success 5').end(() => {
-                            request(app).get('/test').set('X-ApiVersion', 6).expect(200, 'success 6').end(done);
-                        });
-                    });
-                });
-            });
-        });
+        async.series([
+            cb => request(app).get('/v1/test').expect(200, 'success 1').end(cb),
+            cb => request(app).get('/test?v=2').expect(200, 'success 2').end(cb),
+            cb => request(app).get('/test').set('X-ApiVersion', 3).expect(200, 'success 3').end(cb),
+            cb => request(app).get('/v4/test').expect(200, 'success 4').end(cb),
+            cb => request(app).get('/test?v=5').expect(200, 'success 5').end(cb),
+            cb => request(app).get('/test').set('X-ApiVersion', 6).expect(200, 'success 6').end(cb)
+        ], done);
     });
 });

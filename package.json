@@ -29,6 +29,7 @@
     "express": "^4"
   },
   "devDependencies": {
+    "async": "^2.0.1",
     "chai": "^3",
     "coveralls": "^2",
     "express": "^4",
