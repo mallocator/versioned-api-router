@@ -131,10 +131,10 @@ This is the same as the original method. Note that versioning is not supported a
 
 ### Router.use 
 ```
-router.use([path], [version], [function, ...] function)
+router.use([path], [function, ...] function)
 ```
 
-Not yet implemented.
+This is the same as the original method. Note that versioning is not supported at this time for the param call.
                                                    
 
 ### Router.param
