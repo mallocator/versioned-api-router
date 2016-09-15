@@ -147,6 +147,18 @@ describe('Router', () => {
         request(app).get('/test?v=1').expect(200, 'success').end(done);
     });
 
+    it('should ignore object configurations', done => {
+        var router = Router();
+        router.get('/test', {}, (req, res) => res.end('success'));
+
+        var app = express();
+        app.use(router);
+
+        async.series([
+            cb => request(app).get('/v1/test').expect(500).end(cb),
+        ], done);
+    });
+
     it('should be able to process multiple handlers', done => {
         var router = Router();
         router.get(/\/test/, 1, (req, res, next) => next(), (req, res) => res.end('success'));
@@ -178,6 +190,15 @@ describe('Router', () => {
             cb => request(app).get('/test?v=1').expect(200, 'success get').end(cb),
             cb => request(app).post('/test?v=1').expect(200, 'success post').end(cb)
         ], done);
+    });
+
+    it('should not change the req object if disabled', done => {
+        var router = Router({ passVersion: false });
+        router.get('/test', ['^1', 2, /(3|4)/], (req, res) => res.end(req.incomingVersion + ' ' + req.acceptedVersion));
+
+        var app = express();
+        app.use(router);
+        request(app).get('/v1/test').expect(200, 'undefined undefined').end(done);
     });
 
     it('should support the param method without a version', done => {

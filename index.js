@@ -8,7 +8,7 @@ var semver = require('semver');
  * @property {versionCb} [validate]                 A validator the overrides the default behavior for checking the version
  * @property {string} [param=v]                     The parameter name used for determining the version
  * @property {string} [header=X-ApiVersion]         The header name to look for the requested version
- * @property {string[]} paramOrder                  The order in which parameters are parsed from the client object for all endpoints
+ * @property {string[]} [paramOrder]                The order in which parameters are parsed from the client object for all endpoints
  *                                                  The default order is 'params', 'query', 'cookie', 'body' which map to express
  *                                                  properties. Note that if a header is set it is used instead of any of these.
  * @property {string} [responseHeader=X-ApiVersion] The header name to return the resolved version (is a regex|number|string
@@ -82,10 +82,6 @@ function Router(configuration = {}) {
             } else {
                 version = Array.isArray(version) ? version : [version];
             }
-            if (typeof path == 'function') {
-                handlers.unshift(path);
-                path = ''
-            }
             if (!(path instanceof RegExp)) {
                 methodRouter[method]('/v:' + configuration.param + path, ...handlers);
                 original.call(router, '/v:' + configuration.param + path, parseVersion.bind({
@@ -152,7 +148,10 @@ function parseVersion(req, res, next) {
         }
     }
     let validator = (this.configuration.validate || validateVersion).bind({ req, res });
-    validator(version, this.acceptVersion, matches => {
+    validator(version, this.acceptVersion, (err, matches) => {
+        if (err) {
+            return next(err);
+        }
         if (matches){
             if (this.configuration.passVersion) {
                 req.incomingVersion = version;
@@ -187,13 +186,15 @@ function validateVersion(incomingVersion, acceptVersions, cb) {
                 if (acceptVersion instanceof RegExp) {
                     acceptRequest = acceptVersion.test(incomingVersion);
                     break;
+                } else {
+                    cb('Unable to understand object as version in router config. Use string, integer or RegExp instead.');
                 }
         }
         if (acceptRequest) {
-            return cb(true);
+            return cb(null, true);
         }
     }
-    cb(acceptRequest);
+    cb(null, acceptRequest);
 }
 
 /**
