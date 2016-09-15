@@ -98,7 +98,7 @@ In addition the router has options specifically for the version mapping:
 ### Router.all / Router.METHOD
 ```
 router.all(path, [version], [callback, ...] callback)
-router.METHOD(path, [callback, ...] callback)
+router.METHOD(path, [version], [callback, ...] callback)
 ```
 
 This method works the same way that the standard express router work, with the addition of an optional version
@@ -126,7 +126,7 @@ req.acceptedVersion - The version that the handler has been configured to accept
 router.route(path)
 ```
 
-This is the same as the original method. Note that versioning is not supported at this time for the param call.
+This is the same as the original method. Note that versioning is not supported at this time for the route call.
 
 
 ### Router.use 
@@ -134,7 +134,7 @@ This is the same as the original method. Note that versioning is not supported a
 router.use([path], [function, ...] function)
 ```
 
-This is the same as the original method. Note that versioning is not supported at this time for the param call.
+This is the same as the original method. Note that versioning is not supported at this time for the use call.
                                                    
 
 ### Router.param
