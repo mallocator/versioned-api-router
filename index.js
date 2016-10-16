@@ -1,6 +1,9 @@
+var apiVerifier = require('./lib/verifier');
 var express = require('express');
+var path = require('path');
+var responder = require('./lib/responder');
 var semver = require('semver');
-var versionHandler = require('./lib/version');
+var versionVerifier = require('./lib/version');
 
 
 /**
@@ -42,7 +45,7 @@ var versionHandler = require('./lib/version');
  * @type {string[]} The method names                       npm
  */
 var methods = [
-    'all', 'param', 'get', 'post', 'put', 'head', 'delete', 'options', 'trace', 'copy', 'lock', 'mkcol', 'move',
+    'all', 'get', 'post', 'put', 'head', 'delete', 'options', 'trace', 'copy', 'lock', 'mkcol', 'move',
     'purge', 'propfind', 'proppatch', 'unlock', 'report', 'mkactivity', 'checkout', 'merge', 'm-search', 'notify',
     'subscribe', 'unsubscribe', 'patch', 'search', 'connect'
 ];
@@ -64,35 +67,42 @@ const defaultConfig = {
  */
 function Router(configuration = {}) {
     configuration = Object.assign({}, defaultConfig, configuration);
+    configuration.prefix = normalizePrefix(configuration.prefix);
     let router = express.Router(configuration);
     let getRouter = generateRouter.bind({routers: [], configuration});
+    let context = {
+        endpoints: {},
+        router: null,
+        globalConfiguration: configuration
+    };
     for (let method of methods) {
         let original = router[method];
         router[method] = (path, ...args) => {
             if (typeof path != 'string' && !(path instanceof RegExp)) {
                 throw new Error('First parameter needs to be a path (string or RegExp)')
             }
-            let epc = parseParams(original, method, path, args);
-            if (epc.path.toString().startsWith('/v:'+ configuration.param)) {
+            if (path.toString().startsWith('/v:'+ configuration.param)) {
                 throw new Error('Versioned paths will be generated automatically, please avoid prefixing paths');
             }
+            let epc = parseParams(original, method, path, args);
             let methodRouter = getRouter(epc.path, epc.method);
-            if (!(epc.path instanceof RegExp)) {
-                methodRouter[epc.method]('/v:' + configuration.param + epc.path, ...epc.handlers);
-                epc.original.call(router, '/v:' + configuration.param + epc.path, versionHandler.parseVersion.bind({
-                    configuration,
-                    acceptVersion: epc.version,
-                    router: methodRouter
-                }));
-            }
-            methodRouter[method](path, ...epc.handlers);
-            original.call(router, epc.path, versionHandler.parseVersion.bind({
+            context.router = methodRouter;
+            let apiHandler = apiVerifier.configure(context, epc).bind(context);
+            let versionHandler = versionVerifier.parseVersion.bind({
                 configuration,
                 acceptVersion: epc.version,
                 router: methodRouter
-            }));
+            });
+            if (!(epc.path instanceof RegExp)) {
+                methodRouter[epc.method]('/v:' + configuration.param + epc.path, apiHandler, ...epc.handlers);
+                epc.original.call(router, '/v:' + configuration.param + epc.path, versionHandler);
+            }
+            methodRouter[method](path, apiHandler, ...epc.handlers);
+            original.call(router, epc.path, versionHandler);
         }
     }
+    router.__defineGetter__('endpoints', prefixEndpoints.bind(context));
+    router.api = api.bind(context);
     return router;
 }
 
@@ -115,7 +125,9 @@ function parseParams(original, method, path, args, config = {original, method, p
             case 'object':
                 if (arg instanceof RegExp) {
                     config.version.push(arg);
+                    break;
                 }
+                config.api = arg;
                 break;
             case 'number':
             case 'string':
@@ -158,6 +170,45 @@ function generateRouter(endpoint, method) {
         instance: router
     });
     return router;
+}
+
+/**
+ * Returns either an empty string or a normalized path of the prefix
+ * @param {string} prefix
+ * @returns {string}
+ */
+function normalizePrefix(prefix) {
+    if (!prefix || typeof prefix !== 'string' || !prefix.trim().length) {
+        return '';
+    }
+    return path.normalize(prefix);
+}
+
+/**
+ * Getter implementation that will return the currently configured enpoints.
+ * @returns {Object.<string, Object.<string, EndpointConfig>>} Api map with endpoint config nested in path and method.
+ * @this Context
+ */
+function prefixEndpoints(prefix = this.globalConfiguration.prefix) {
+    var map = {};
+    for (let prop in this.endpoints) {
+        map[path.join(prefix, prop)] = Object.assign({}, this.endpoints[prop]);
+    }
+    return map;
+}
+
+/**
+ * A standard request handler implementation that will respond with the currently configured api for this router. Can be used to make
+ * it easier for developers to work with your API.
+ * @param {ClientRequest} req   An express client request object
+ * @param {ServerResponse} res  An express server response object
+ * @this Context
+ */
+function api(req, res) {
+    var url = req.originalUrl;
+    var prefix = url.substr(0, url.lastIndexOf(req.route.path));
+    prefix = prefix.substr(0, prefix.lastIndexOf(this.globalConfiguration.prefix));
+    responder.respond(req, res, prefixEndpoints.call(this, prefix.length ? prefix : this.globalConfiguration.prefix));
 }
 
 module.exports = Router;

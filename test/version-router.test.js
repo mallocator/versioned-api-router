@@ -8,7 +8,7 @@ var request = require('supertest');
 var Router = require('..');
 
 
-describe('Router', () => {
+describe('Version Router', () => {
     it('should process normal requests same as the default router as this defaults as catch all', done => {
         var router = Router();
         router.get('/test', (req, res) => res.end('success'));
