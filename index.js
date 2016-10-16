@@ -1,5 +1,6 @@
 var express = require('express');
 var semver = require('semver');
+var versionHandler = require('./lib/version');
 
 
 /**
@@ -26,19 +27,15 @@ var semver = require('semver');
  */
 
 /**
- * @callback versionCb
- * @param {string} incomingVersion                      The version that has been parsed off of the incoming request
- * @param {string[]|number[]|RegExp[]} acceptVersion    The version that this endpoint is accepting
- * @param {versionResponseCb} cb                        A callback that lets the router know whether the version should be
- *                                                      handled by this handler or not.
- * @property {ClientRequest} req    The http request object
- * @property {ServerResponse} res   The http response object
+ * @typedef {object} EndpointConfig
+ * @private
+ * @property {function} original                    The original router function to be called
+ * @property {string} method                        The name of the original function
+ * @property {string|RegExp} path                   The path configuration for the router
+ * @property {Array.<string|number|RegExp>} version An array with allowed versions
+ * @property {Array.<function>} handlers            A list of request handlers to be called by the router
  */
 
-/**
- * @callback versionResponseCb
- * @param {boolean} match   Signal whether the version is a match or not.
- */
 
 /**
  * All supported methods by the express router that need to be proxied.
@@ -71,34 +68,67 @@ function Router(configuration = {}) {
     let getRouter = generateRouter.bind({routers: [], configuration});
     for (let method of methods) {
         let original = router[method];
-        router[method] = (path, version, ...handlers) => {
-            if (path.toString().startsWith('/v:'+ configuration.param)) {
+        router[method] = (path, ...args) => {
+            if (typeof path != 'string' && !(path instanceof RegExp)) {
+                throw new Error('First parameter needs to be a path (string or RegExp)')
+            }
+            let epc = parseParams(original, method, path, args);
+            if (epc.path.toString().startsWith('/v:'+ configuration.param)) {
                 throw new Error('Versioned paths will be generated automatically, please avoid prefixing paths');
             }
-            let methodRouter = getRouter(path, method);
-            if (typeof version == 'function') {
-                handlers.unshift(version);
-                version = [];
-            } else {
-                version = Array.isArray(version) ? version : [version];
-            }
-            if (!(path instanceof RegExp)) {
-                methodRouter[method]('/v:' + configuration.param + path, ...handlers);
-                original.call(router, '/v:' + configuration.param + path, parseVersion.bind({
+            let methodRouter = getRouter(epc.path, epc.method);
+            if (!(epc.path instanceof RegExp)) {
+                methodRouter[epc.method]('/v:' + configuration.param + epc.path, ...epc.handlers);
+                epc.original.call(router, '/v:' + configuration.param + epc.path, versionHandler.parseVersion.bind({
                     configuration,
-                    acceptVersion: version,
+                    acceptVersion: epc.version,
                     router: methodRouter
                 }));
             }
-            methodRouter[method](path, ...handlers);
-            original.call(router, path, parseVersion.bind({
+            methodRouter[method](path, ...epc.handlers);
+            original.call(router, epc.path, versionHandler.parseVersion.bind({
                 configuration,
-                acceptVersion: version,
+                acceptVersion: epc.version,
                 router: methodRouter
             }));
         }
     }
     return router;
+}
+
+/**
+ * Parses incoming parameters into an object that is easy to pass around.
+ * @param {function} original
+ * @param {string} method
+ * @param {string|RegExp} path
+ * @param {Array} args
+ * @param {EndpointConfig} [config]
+ * @returns {EndpointConfig}
+ */
+function parseParams(original, method, path, args, config = {original, method, path, version: [], handlers: []}) {
+    for (let arg of args) {
+        if (arg instanceof Array) {
+            parseParams(original, method, path, arg, config);
+            continue;
+        }
+        switch (typeof arg) {
+            case 'object':
+                if (arg instanceof RegExp) {
+                    config.version.push(arg);
+                }
+                break;
+            case 'number':
+            case 'string':
+                config.version.push(arg);
+                break;
+            case 'function':
+                config.handlers.push(arg);
+                break;
+            default:
+                throw new Error('Unsupported router parameter: ' + arg);
+        }
+    }
+    return config;
 }
 
 /**
@@ -128,91 +158,6 @@ function generateRouter(endpoint, method) {
         instance: router
     });
     return router;
-}
-
-/**
- *
- * @param {ClientRequest} req
- * @param {ServerResponse} res
- * @param {function} next
- * @property {Object} router
- * @property {string|number|RegExp} acceptVersion
- */
-function parseVersion(req, res, next) {
-    let version = null;
-    for (let params of this.configuration.paramOrder) {
-        if (params == 'header') {
-            version = version || req.get(this.configuration.header);;
-        } else {
-            version = version || req[params] && req[params][this.configuration.param];
-        }
-    }
-    let validator = (this.configuration.validate || validateVersion).bind({ req, res });
-    validator(version, this.acceptVersion, (err, matches) => {
-        if (err) {
-            return next(err);
-        }
-        if (matches){
-            if (this.configuration.passVersion) {
-                req.incomingVersion = version;
-                req.acceptedVersion = this.acceptedVersion;
-            }
-            if (this.acceptVersion && !res.headersSent && this.configuration.responseHeader) {
-                res.set(this.configuration.responseHeader, this.acceptVersion.toString());
-            }
-            this.router.handle(req, res, next);
-        }
-        next()
-    });
-}
-
-/**
- * The default version validator that will match the incoming version against the acceptable version for various types.
- * @type versionCb
- */
-function validateVersion(incomingVersion, acceptVersions, cb) {
-    let acceptRequest = true;
-    for (let acceptVersion of acceptVersions) {
-        acceptRequest = false;
-        switch (typeof acceptVersion) {
-            case 'string':
-                incomingVersion = semverizeVersion(incomingVersion);
-                acceptRequest = semver.satisfies(incomingVersion, acceptVersion);
-                break;
-            case 'number':
-                acceptRequest = acceptVersion == parseInt(incomingVersion);
-                break;
-            case 'object':
-                if (acceptVersion instanceof RegExp) {
-                    acceptRequest = acceptVersion.test(incomingVersion);
-                    break;
-                } else {
-                    cb('Unable to understand object as version in router config. Use string, integer or RegExp instead.');
-                }
-        }
-        if (acceptRequest) {
-            return cb(null, true);
-        }
-    }
-    cb(null, acceptRequest);
-}
-
-/**
- * This function tries to convert an incoming version into something that semver might understand.
- * @param {string} version
- * @returns {string}
- */
-function semverizeVersion(version) {
-    version = '' + version;
-    let splitVersion = version.split('.');
-    switch(splitVersion.length) {
-        case 1:
-            return version + '.0.0';
-        case 2:
-            return splitVersion.join('.') + '.0';
-        default:
-            return version;
-    }
 }
 
 module.exports = Router;

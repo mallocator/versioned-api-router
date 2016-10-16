@@ -1,5 +1,4 @@
 /* global describe, it, beforeEach, afterEach */
-'use strict';
 
 var async = require('async');
 var expect = require('chai').expect;
@@ -58,6 +57,17 @@ describe('Router', () => {
     it('should prevent me from passing in a path that is already versioned', () => {
         var router = Router();
         expect(router.get.bind(null, '/v:v/test')).to.throw(Error);
+    });
+
+    it('should prevent me from not passing in a path', () => {
+        var router = Router();
+        expect(router.get.bind({})).to.throw(Error);
+        expect(router.get.bind(() => {})).to.throw(Error);
+    });
+
+    it('should prevent me from passing in unsupported parameters', () => {
+        var router = Router();
+        expect(router.get.bind(null, '/test', false)).to.throw(Error);
     });
 
     it('should be able to support multiple versions for the same endpoint', done => {
@@ -145,18 +155,6 @@ describe('Router', () => {
         var app = express();
         app.use(router);
         request(app).get('/test?v=1').expect(200, 'success').end(done);
-    });
-
-    it('should ignore object configurations', done => {
-        var router = Router();
-        router.get('/test', {}, (req, res) => res.end('success'));
-
-        var app = express();
-        app.use(router);
-
-        async.series([
-            cb => request(app).get('/v1/test').expect(500).end(cb),
-        ], done);
     });
 
     it('should be able to process multiple handlers', done => {
