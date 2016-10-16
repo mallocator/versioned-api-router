@@ -12,6 +12,11 @@ var versionVerifier = require('./lib/version');
  * @property {versionCb} [validate]                 A validator the overrides the default behavior for checking the version
  * @property {string} [param=v]                     The parameter name used for determining the version
  * @property {string} [header=X-ApiVersion]         The header name to look for the requested version
+ * @property {string} [prefix]                  An optional prefix that will be used when generating the api map
+ * @property {parseCb} [error]                  An error handler that overrides the default behavior for all params on this endpoint
+ * @property {validateCb} [validate]            A validator the overrides the default behavior for all params on this endpoint
+ * @property {parseCb} [success]                A success handler that overrides the default behavior for all params on this endpoint
+ * @property {string} [paramMap=arguments]      The name of the request property where parsed parameters can be found for all endpoints
  * @property {string[]} [paramOrder]                The order in which parameters are parsed from the client object for all endpoints
  *                                                  The default order is 'params', 'query', 'cookie', 'body' which map to express
  *                                                  properties. Note that if a header is set it is used instead of any of these.
@@ -39,6 +44,19 @@ var versionVerifier = require('./lib/version');
  * @property {Array.<function>} handlers            A list of request handlers to be called by the router
  */
 
+/**
+ * @typedef {Object} ParseResult
+ * @property {boolean} error    True if this callback is the result of a processing error
+ */
+
+/**
+ * @callback parseCb
+ * @param {ParseResult} error   An error callback that has information such as endpoints or missing parameters
+ * @param {ClientRequest} req   The http request object
+ * @param {ServerResponse} res  The http response object
+ * @param {function} next       The chaining function that allows other handlers to be executed after this one
+ */
+
 
 /**
  * All supported methods by the express router that need to be proxied.
@@ -59,6 +77,8 @@ const defaultConfig = {
 };
 
 // TODO support use, param and route?
+// TODO Add version to api endpoints
+// TODO write tests for mix between version and api configs
 
 /**
  * The router function that create a new router and proxies all requests so that verification can be done for each path.
