@@ -1,8 +1,8 @@
-# express-version-router
-[![npm version](https://badge.fury.io/js/express-version-router.svg)](http://badge.fury.io/js/express-version-router)
-[![Build Status](https://travis-ci.org/mallocator/express-version-router.svg?branch=master)](https://travis-ci.org/mallocator/express-version-router)
-[![Coverage Status](https://coveralls.io/repos/mallocator/express-version-router/badge.svg?branch=master&service=github)](https://coveralls.io/github/mallocator/express-version-router?branch=master)
-[![Dependency Status](https://david-dm.org/mallocator/express-version-router.svg)](https://david-dm.org/mallocator/express-version-router) 
+# versioned-api-router
+[![npm version](https://badge.fury.io/js/versioned-api-router.svg)](http://badge.fury.io/js/versioned-api-router)
+[![Build Status](https://travis-ci.org/mallocator/versioned-api-router.svg?branch=master)](https://travis-ci.org/mallocator/versioned-api-router)
+[![Coverage Status](https://coveralls.io/repos/mallocator/versioned-api-router/badge.svg?branch=master&service=github)](https://coveralls.io/github/mallocator/versioned-api-router?branch=master)
+[![Dependency Status](https://david-dm.org/mallocator/versioned-api-router.svg)](https://david-dm.org/mallocator/versioned-api-router) 
 
 A router for express that manages api versioning and parameter handling.
 
@@ -21,7 +21,7 @@ A router for express that manages api versioning and parameter handling.
 
 
 ## Installation
-```npm install --save express-version-router```
+```npm install --save versioned-api-router```
 
 
 ## Examples for Version handling
@@ -31,7 +31,7 @@ Set up express with the router:
 var express = require('express');
 var app = express();
 
-var versionRouter = require('express-version-router');
+var versionRouter = require('versioned-api-router');
 var router = versionRouter();
 var errorHandler = (req, res) => res.status(404).end('not found');
 app.use(router, errorHandler);        // will only call the errorHandler if it can't resolve the version
@@ -144,7 +144,7 @@ Status Code 200
 
 ### Router
 ```
-var versionRouter = require('express-version-router');
+var versionRouter = require('versioned-api-router');
 var router = versionRouter({
     param: 'v',
     header: 'X-ApiVersion',

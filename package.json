@@ -1,5 +1,5 @@
 {
-  "name": "express-version-router",
+  "name": "versioned-api-router",
   "version": "0.5.4",
   "description": "A router for express that manages api versioning.",
   "license": "Apache-2.0",
