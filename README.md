@@ -155,7 +155,8 @@ var router = versionRouter({
     success: (value, req, res, next) => {},             
     validate: (value, req, res, next) => {},            
     paramMap: 'arguments',                               
-    paramOrder: ['params', 'query', 'cookie', 'body', 'header']
+    paramOrder: ['params', 'query', 'cookie', 'body', 'header'],
+    routerFunction: express.Router
 });
 ```
 
@@ -173,6 +174,7 @@ In addition the router has options specifically for the version mapping:
 * validate: A global validator the overrides the default behavior for api parameters (not version mismatches).
 * paramMap: The property on the request object on which to find parsed parameters.
 * paramOrder: The order in which request properties are searched for incoming parameters. Once a parameter has been found it's not going to be overwritten by other properties.
+* routerFunction: The router function used to generate Routers
 
 
 ### Router.all / Router.METHOD

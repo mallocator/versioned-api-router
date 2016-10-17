@@ -4,7 +4,7 @@
 var expect = require('chai').expect;
 
 
-var verifier = require('../lib/verifier');
+var verifier = require('../lib/apiVerifier');
 
 
 describe('verifier', () => {
@@ -27,7 +27,7 @@ describe('verifier', () => {
         it('should normalize the configuration parameters', () => {
             var context = {
                 endpoints: {},
-                globalConfiguration: {
+                configuration: {
                     paramOrder: [ 'query' ]
                 }
             };
@@ -42,7 +42,8 @@ describe('verifier', () => {
             verifier.configure(context, {
                 method: 'get',
                 path: '/test',
-                api
+                api,
+                version: []
             });
             expect(context.endpoints).to.deep.equal({
                 "/test": {
@@ -87,7 +88,7 @@ describe('verifier', () => {
         it('should apply global configuration options to individual endpoints', () => {
             var context = {
                 endpoints: {},
-                globalConfiguration: {
+                configuration: {
                     paramOrder: [ 'query' ],
                     error: 'error method',
                     validate: 'validate method',
@@ -105,7 +106,8 @@ describe('verifier', () => {
             verifier.configure(context, {
                 method: 'get',
                 path: '/test',
-                api
+                api,
+                version: []
             });
             expect(context.endpoints).to.deep.equal({
                 "/test": {

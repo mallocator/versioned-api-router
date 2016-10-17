@@ -1,31 +1,31 @@
-var apiVerifier = require('./lib/verifier');
+var apiVerifier = require('./lib/apiVerifier');
 var express = require('express');
 var path = require('path');
 var responder = require('./lib/responder');
-var semver = require('semver');
-var versionVerifier = require('./lib/version');
+var versionVerifier = require('./lib/versionVerifier');
 
 
 /**
  * @typedef {Object} RouterConfig
- * @property {boolean} [passVersion=true]           A flag that sets whether to have the version be available on the request object
- * @property {versionCb} [validate]                 A validator the overrides the default behavior for checking the version
- * @property {string} [param=v]                     The parameter name used for determining the version
- * @property {string} [header=X-ApiVersion]         The header name to look for the requested version
- * @property {string} [prefix]                  An optional prefix that will be used when generating the api map
- * @property {parseCb} [error]                  An error handler that overrides the default behavior for all params on this endpoint
- * @property {validateCb} [validate]            A validator the overrides the default behavior for all params on this endpoint
- * @property {parseCb} [success]                A success handler that overrides the default behavior for all params on this endpoint
- * @property {string} [paramMap=arguments]      The name of the request property where parsed parameters can be found for all endpoints
- * @property {string[]} [paramOrder]                The order in which parameters are parsed from the client object for all endpoints
- *                                                  The default order is 'params', 'query', 'cookie', 'body' which map to express
- *                                                  properties. Note that if a header is set it is used instead of any of these.
- * @property {string} [responseHeader=X-ApiVersion] The header name to return the resolved version (is a regex|number|string
- *                                                  depending on what was configured on the endpoint). Will not be used
- *                                                  if the headers have already been sent before the router gets a chance.
- * @property {boolean} [caseSensitive=false]        Express router option to handle paths respecting case
- * @property {boolean} [mergeParams=false]          Express router option to preserve req.params from parent router
- * @property {boolean} [strict=false]               Express router option to not ignore trailing slashes on endpoints
+ * @property {boolean} [passVersion=true]               A flag that sets whether to have the version be available on the request object
+ * @property {versionCb} [validate]                     A validator the overrides the default behavior for checking the version
+ * @property {string} [param=v]                         The parameter name used for determining the version
+ * @property {string} [header=X-ApiVersion]             The header name to look for the requested version
+ * @property {string} [prefix]                          An optional prefix that will be used when generating the api map
+ * @property {parseCb} [error]                          An error handler that overrides the default behavior for all params on this endpoint
+ * @property {validateCb} [validate]                    A validator the overrides the default behavior for all params on this endpoint
+ * @property {parseCb} [success]                        A success handler that overrides the default behavior for all params on this endpoint
+ * @property {string} [paramMap=arguments]              The name of the request property where parsed parameters can be found for all endpoints
+ * @property {string[]} [paramOrder]                    The order in which parameters are parsed from the client object for all endpoints
+ *                                                      The default order is 'params', 'query', 'cookie', 'body' which map to express
+ *                                                      properties. Note that if a header is set it is used instead of any of these.
+ * @property {string} [responseHeader=X-ApiVersion]     The header name to return the resolved version (is a regex|number|string
+ *                                                      depending on what was configured on the endpoint). Will not be used
+ *                                                      if the headers have already been sent before the router gets a chance.
+ * @property {function} [routerFunction=express.Router] The router function used to generate Routers
+ * @property {boolean} [caseSensitive=false]            Express router option to handle paths respecting case
+ * @property {boolean} [mergeParams=false]              Express router option to preserve req.params from parent router
+ * @property {boolean} [strict=false]                   Express router option to not ignore trailing slashes on endpoints
  */
 
 /**
@@ -42,6 +42,15 @@ var versionVerifier = require('./lib/version');
  * @property {string|RegExp} path                   The path configuration for the router
  * @property {Array.<string|number|RegExp>} version An array with allowed versions
  * @property {Array.<function>} handlers            A list of request handlers to be called by the router
+ */
+
+/**
+ * @typedef {Object} Context
+ * @private
+ * @property {function} [router]                            The router that takes care of the actually routing
+ * @property {RouterConfig} configuration                   The router global configuration
+ * @property {Object.<string, EndpointConfig>} endpoints    A map of endpoints to store configurations in
+ * @property {number|string|RegExp} [acceptVersion]         The version that this endpoint is going to accept
  */
 
 /**
@@ -73,27 +82,29 @@ const defaultConfig = {
     param: 'v',
     header: 'X-ApiVersion',
     responseHeader: 'X-ApiVersion',
-    passVersion: true
+    passVersion: true,
+    routerFunction: express.Router
 };
 
 // TODO support use, param and route?
-// TODO Add version to api endpoints
+// TODO Store API documentation nested under version
+// TODO return api for specific version with parameter given
 // TODO write tests for mix between version and api configs
 
 /**
  * The router function that create a new router and proxies all requests so that verification can be done for each path.
- * @param {RouterConfig} [configuration]    An options object that will be passed on to the express router and this router for config
+ * @param {RouterConfig} [configuration]                An options object that will be passed on to the express router and this router for config
  * @returns {*} The middleware function that can be used by app.use()
  */
 function Router(configuration = {}) {
     configuration = Object.assign({}, defaultConfig, configuration);
     configuration.prefix = normalizePrefix(configuration.prefix);
-    let router = express.Router(configuration);
+    let router = configuration.routerFunction(configuration);
     let getRouter = generateRouter.bind({routers: [], configuration});
     let context = {
         endpoints: {},
         router: null,
-        globalConfiguration: configuration
+        configuration
     };
     for (let method of methods) {
         let original = router[method];
@@ -107,7 +118,7 @@ function Router(configuration = {}) {
             let epc = parseParams(original, method, path, args);
             let methodRouter = getRouter(epc.path, epc.method);
             context.router = methodRouter;
-            let apiHandler = apiVerifier.configure(context, epc).bind(context);
+            let apiHandler = apiVerifier.configure(context, epc);
             let versionHandler = versionVerifier.parseVersion.bind({
                 configuration,
                 acceptVersion: epc.version,
@@ -184,7 +195,7 @@ function generateRouter(endpoint, method) {
             return router.instance;
         }
     }
-    let router = express.Router(this.configuration);
+    let router = this.configuration.routerFunction(this.configuration);
     this.routers.push({
         paths: { [method]: [ endpoint ] },
         instance: router
@@ -209,7 +220,7 @@ function normalizePrefix(prefix) {
  * @returns {Object.<string, Object.<string, EndpointConfig>>} Api map with endpoint config nested in path and method.
  * @this Context
  */
-function prefixEndpoints(prefix = this.globalConfiguration.prefix) {
+function prefixEndpoints(prefix = this.configuration.prefix) {
     var map = {};
     for (let prop in this.endpoints) {
         map[path.join(prefix, prop)] = Object.assign({}, this.endpoints[prop]);
@@ -227,8 +238,8 @@ function prefixEndpoints(prefix = this.globalConfiguration.prefix) {
 function api(req, res) {
     var url = req.originalUrl;
     var prefix = url.substr(0, url.lastIndexOf(req.route.path));
-    prefix = prefix.substr(0, prefix.lastIndexOf(this.globalConfiguration.prefix));
-    responder.respond(req, res, prefixEndpoints.call(this, prefix.length ? prefix : this.globalConfiguration.prefix));
+    prefix = prefix.substr(0, prefix.lastIndexOf(this.configuration.prefix));
+    responder.respond(req, res, prefixEndpoints.call(this, prefix.length ? prefix : this.configuration.prefix));
 }
 
 module.exports = Router;
