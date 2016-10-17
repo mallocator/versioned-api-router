@@ -3,7 +3,7 @@
 
 var expect = require('chai').expect;
 
-
+var Endpoints = require('../lib/endpoints');
 var verifier = require('../lib/apiVerifier');
 
 
@@ -26,7 +26,7 @@ describe('verifier', () => {
     describe('#configure()', () => {
         it('should normalize the configuration parameters', () => {
             var context = {
-                endpoints: {},
+                endpoints: new Endpoints({param: 'v'}),
                 configuration: {
                     paramOrder: [ 'query' ]
                 }
@@ -45,7 +45,7 @@ describe('verifier', () => {
                 api,
                 version: []
             });
-            expect(context.endpoints).to.deep.equal({
+            expect(context.endpoints.list('')).to.deep.equal({
                 "/test": {
                     GET: {
                         description: 'This is a test',
@@ -79,7 +79,8 @@ describe('verifier', () => {
                                 validate: undefined,
                                 success: undefined
                             }
-                        }
+                        },
+                        versions: [ 0 ]
                     }
                 }
             });
@@ -87,7 +88,7 @@ describe('verifier', () => {
 
         it('should apply global configuration options to individual endpoints', () => {
             var context = {
-                endpoints: {},
+                endpoints: new Endpoints({param: 'v'}),
                 configuration: {
                     paramOrder: [ 'query' ],
                     error: 'error method',
@@ -109,7 +110,7 @@ describe('verifier', () => {
                 api,
                 version: []
             });
-            expect(context.endpoints).to.deep.equal({
+            expect(context.endpoints.list('')).to.deep.equal({
                 "/test": {
                     GET: {
                         description: 'This is a test',
@@ -143,7 +144,8 @@ describe('verifier', () => {
                                 validate: 'validate method',
                                 success: 'success method'
                             }
-                        }
+                        },
+                        versions: [ 0 ]
                     }
                 }
             });
@@ -413,7 +415,7 @@ describe('verifier', () => {
 
     describe('#verify()', () => {
         it('should be able to use a custom error handler', done => {
-            var chain = () => {};
+            var chain = () => { expect.fail('should have thrown error') };
             var request = {
                 route: {
                     path: '/test'
@@ -421,27 +423,25 @@ describe('verifier', () => {
                 method: 'GET',
                 params: {}
             };
+            var endpoints = new Endpoints({ param: 'v' });
+            endpoints.add('/test', 'GET', [ 0 ], {
+                error: (error, req, res, next) => {
+                    expect(error).to.be.instanceOf(Error);
+                    expect(req).to.deep.equal(request);
+                    expect(res).to.deep.equal(response);
+                    expect(next).to.deep.equal(chain);
+                    done();
+                },
+                params: {
+                    age: 'number'
+                }
+            });
             var response = {};
             var context = {
                 globalConfiguration: {
                     paramOrder: [ 'params' ]
                 },
-                endpoints: {
-                    '/test': {
-                        GET: {
-                            error: (error, req, res, next) => {
-                                expect(error).to.be.instanceOf(Error);
-                                expect(req).to.deep.equal(request);
-                                expect(res).to.deep.equal(response);
-                                expect(next).to.deep.equal(chain);
-                                done();
-                            },
-                            params: {
-                                age: 'number'
-                            }
-                        }
-                    }
-                }
+                endpoints
             };
 
             verifier.verify.call(context, request, response, chain);
@@ -461,26 +461,21 @@ describe('verifier', () => {
                 json: () => response,
                 end: () => response
             };
-            var context = {
-                endpoints: {
-                    '/test': {
-                        GET: {
-                            success: (error, req, res, next) => {
-                                expect(error).to.be.not.ok;
-                                expect(req).to.deep.equal(request);
-                                expect(res).to.deep.equal(response);
-                                expect(next).to.deep.equal(chain);
-                                done();
-                            },
-                            paramOrder: [ 'params' ],
-                            params: {
-                                age: 'number'
-                            }
-                        }
-                    }
+            let endpoints = new Endpoints({ param: 'v' });
+            endpoints.add('/test', 'GET', [ 0 ], {
+                success: (error, req, res, next) => {
+                    expect(error).to.be.not.ok;
+                    expect(req).to.deep.equal(request);
+                    expect(res).to.deep.equal(response);
+                    expect(next).to.deep.equal(chain);
+                    done();
+                },
+                paramOrder: [ 'params' ],
+                params: {
+                    age: 'number'
                 }
-            };
-
+            });
+            var context = { endpoints };
             verifier.verify.call(context, request, response, chain);
         });
     });

@@ -167,7 +167,8 @@ describe('Api Router', () => {
                             required: true,
                             type: 'number'
                         }
-                    }
+                    },
+                    versions: [ 0 ]
                 }
             }
         }).end(done);
@@ -200,7 +201,8 @@ describe('Api Router', () => {
                             success: undefined,
                             validate: undefined
                         }
-                    }
+                    },
+                    versions: [ 0 ]
                 }
             }
         });
@@ -219,7 +221,8 @@ describe('Api Router', () => {
                             required: true,
                             type: 'number'
                         }
-                    }
+                    },
+                    versions: [ 0 ]
                 }
             }
         }).end(done);
@@ -255,7 +258,8 @@ describe('Api Router', () => {
                             required: true,
                             type: 'number'
                         }
-                    }
+                    },
+                    versions: [ 0 ]
                 }
             }
         }).end(done);
@@ -291,7 +295,8 @@ describe('Api Router', () => {
                             required: true,
                             type: 'number'
                         }
-                    }
+                    },
+                    versions: [ 0 ]
                 }
             }
         }).end(done);

@@ -1,5 +1,6 @@
 var apiVerifier = require('./lib/apiVerifier');
 var express = require('express');
+var Endpoints = require('./lib/endpoints');
 var path = require('path');
 var responder = require('./lib/responder');
 var versionVerifier = require('./lib/versionVerifier');
@@ -87,7 +88,6 @@ const defaultConfig = {
 };
 
 // TODO support use, param and route?
-// TODO Store API documentation nested under version
 // TODO return api for specific version with parameter given
 // TODO write tests for mix between version and api configs
 
@@ -101,11 +101,7 @@ function Router(configuration = {}) {
     configuration.prefix = normalizePrefix(configuration.prefix);
     let router = configuration.routerFunction(configuration);
     let getRouter = generateRouter.bind({routers: [], configuration});
-    let context = {
-        endpoints: {},
-        router: null,
-        configuration
-    };
+    let endpoints = new Endpoints(configuration);
     for (let method of methods) {
         let original = router[method];
         router[method] = (path, ...args) => {
@@ -115,25 +111,28 @@ function Router(configuration = {}) {
             if (path.toString().startsWith('/v:'+ configuration.param)) {
                 throw new Error('Versioned paths will be generated automatically, please avoid prefixing paths');
             }
-            let epc = parseParams(original, method, path, args);
+            let epc = parseParams.call(configuration, original, method, path, args);
             let methodRouter = getRouter(epc.path, epc.method);
-            context.router = methodRouter;
-            let apiHandler = apiVerifier.configure(context, epc);
+            let apiHandler = apiVerifier.configure({
+                endpoints,
+                configuration,
+                router: methodRouter
+            }, epc);
             let versionHandler = versionVerifier.parseVersion.bind({
                 configuration,
                 acceptVersion: epc.version,
                 router: methodRouter
             });
             if (!(epc.path instanceof RegExp)) {
-                methodRouter[epc.method]('/v:' + configuration.param + epc.path, apiHandler, ...epc.handlers);
-                epc.original.call(router, '/v:' + configuration.param + epc.path, versionHandler);
+                methodRouter[epc.method](epc.versionedPath, apiHandler, ...epc.handlers);
+                epc.original.call(router, epc.versionedPath, versionHandler);
             }
             methodRouter[method](path, apiHandler, ...epc.handlers);
             original.call(router, epc.path, versionHandler);
         }
     }
-    router.__defineGetter__('endpoints', prefixEndpoints.bind(context));
-    router.api = api.bind(context);
+    router.__defineGetter__('endpoints', prefixEndpoints.bind({ configuration, endpoints }));
+    router.api = api.bind({ configuration, endpoints });
     return router;
 }
 
@@ -145,8 +144,17 @@ function Router(configuration = {}) {
  * @param {Array} args
  * @param {EndpointConfig} [config]
  * @returns {EndpointConfig}
+ * @this {RouterConfig}
  */
-function parseParams(original, method, path, args, config = {original, method, path, version: [], handlers: []}) {
+function parseParams(original, method, path, args, config) {
+    config = config || {
+        original,
+        method,
+        path,
+        versionedPath: '/v:' + this.param + path,
+        version: [], // TODO rename to versionS
+        handlers: []
+    };
     for (let arg of args) {
         if (arg instanceof Array) {
             parseParams(original, method, path, arg, config);
@@ -220,12 +228,8 @@ function normalizePrefix(prefix) {
  * @returns {Object.<string, Object.<string, EndpointConfig>>} Api map with endpoint config nested in path and method.
  * @this Context
  */
-function prefixEndpoints(prefix = this.configuration.prefix) {
-    var map = {};
-    for (let prop in this.endpoints) {
-        map[path.join(prefix, prop)] = Object.assign({}, this.endpoints[prop]);
-    }
-    return map;
+function prefixEndpoints(prefix) {
+    return this.endpoints.list(prefix);
 }
 
 /**
