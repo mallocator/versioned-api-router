@@ -103,10 +103,10 @@ describe('Router', () => {
         var app = express();
         app.use(router);
         async.series([
-            // cb => request(app).get('/v1/test?var1=25').expect(200, 'success').end(cb),
-            // cb => request(app).get('/v2/test?var2=25').expect(200, 'success').end(cb),
-            // cb => request(app).get('/v3/test?var3=25').expect(200, 'success').end(cb),
-            // cb => request(app).get('/v4/test?var3=25').expect(200, 'success').end(cb),
+            cb => request(app).get('/v1/test?var1=25').expect(200, 'success').end(cb),
+            cb => request(app).get('/v2/test?var2=25').expect(200, 'success').end(cb),
+            cb => request(app).get('/v3/test?var3=25').expect(200, 'success').end(cb),
+            cb => request(app).get('/v4/test?var3=25').expect(200, 'success').end(cb),
             cb => request(app).get('/v5/test?var4=25').expect(200, 'success').end(cb)
         ], done);
     });
