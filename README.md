@@ -315,3 +315,9 @@ Support for complex objects is only possible in body requests and is tbd. (no su
 
 For more examples check out [api-router.test.js](test/api-router.test.js) and [version.test.js](test/version-router.test.js) the test directory
 
+
+## TODO
+
+* Overlapping api configuration don't work yet. The plan is to merge overlapping configs and make all params optional.
+* Better formatting for the endpoint call with versions.
+* More test coverage for using both version and api config at the same time.

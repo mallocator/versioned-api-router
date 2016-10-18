@@ -12,7 +12,14 @@
   "keywords": [
     "express",
     "router",
-    "version"
+    "version",
+    "rest",
+    "api",
+    "json",
+    "parameters",
+    "params",
+    "default",
+    "values"
   ],
   "bugs": {
     "url": "https://github.com/mallocator/express-version-router/issues",
@@ -20,7 +27,7 @@
   },
   "homepage": "https://github.com/mallocator/express-version-router#readme",
   "engine": {
-    "node": ">=6.3"
+    "node": ">=6.8"
   },
   "dependencies": {
     "semver": "^5"
