@@ -105,12 +105,6 @@ function Router(configuration = {}) {
     for (let method of methods) {
         let original = router[method];
         router[method] = (path, ...args) => {
-            if (typeof path != 'string' && !(path instanceof RegExp)) {
-                throw new Error('First parameter needs to be a path (string or RegExp)')
-            }
-            if (path.toString().startsWith('/v:'+ configuration.param)) {
-                throw new Error('Versioned paths will be generated automatically, please avoid prefixing paths');
-            }
             let epc = parseParams.call(configuration, original, method, path, args);
             let methodRouter = getRouter(epc.path, epc.method);
             let apiHandler = apiVerifier.configure({
@@ -124,11 +118,11 @@ function Router(configuration = {}) {
                 router: methodRouter
             });
             if (!(epc.path instanceof RegExp)) {
-                methodRouter[epc.method](epc.versionedPath, apiHandler, ...epc.handlers);
                 epc.original.call(router, epc.versionedPath, versionHandler);
+                methodRouter[epc.method](epc.versionedPath, apiHandler, ...epc.handlers);
             }
-            methodRouter[method](path, apiHandler, ...epc.handlers);
             original.call(router, epc.path, versionHandler);
+            methodRouter[method](epc.path, apiHandler, ...epc.handlers);
         }
     }
     router.__defineGetter__('endpoints', prefixEndpoints.bind({ configuration, endpoints }));
@@ -137,7 +131,7 @@ function Router(configuration = {}) {
 }
 
 /**
- * Parses incoming parameters into an object that is easy to pass around.
+ * Parses parameters from a route configuration into an object that is easy to pass around.
  * @param {function} original
  * @param {string} method
  * @param {string|RegExp} path
@@ -147,6 +141,12 @@ function Router(configuration = {}) {
  * @this {RouterConfig}
  */
 function parseParams(original, method, path, args, config) {
+    if (typeof path != 'string' && !(path instanceof RegExp)) {
+        throw new Error('First parameter needs to be a path (string or RegExp)')
+    }
+    if (path.toString().startsWith('/v:' + this.param)) {
+        throw new Error('Versioned paths will be generated automatically, please avoid prefixing paths');
+    }
     config = config || {
         original,
         method,

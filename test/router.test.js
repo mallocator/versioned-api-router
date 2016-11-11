@@ -110,4 +110,15 @@ describe('Router', () => {
             cb => request(app).get('/v5/test?var4=25').expect(200, 'success').end(cb)
         ], done);
     });
+
+    it('should support requests that respond with delayed responses', done => {
+        var router = Router();
+        router.get('/test', (req, res) => {
+            setTimeout(() => res.end('success'), 10);
+        });
+
+        var app = express();
+        app.use(router);
+        request(app).get('/test').expect(200, 'success').end(done)
+    });
 });
