@@ -2,7 +2,7 @@
 [![npm version](https://badge.fury.io/js/versioned-api-router.svg)](http://badge.fury.io/js/versioned-api-router)
 [![Build Status](https://travis-ci.org/mallocator/versioned-api-router.svg?branch=master)](https://travis-ci.org/mallocator/versioned-api-router)
 [![Coverage Status](https://coveralls.io/repos/mallocator/versioned-api-router/badge.svg?branch=master&service=github)](https://coveralls.io/github/mallocator/versioned-api-router?branch=master)
-[![Dependency Status](https://david-dm.org/mallocator/versioned-api-router.svg)](https://david-dm.org/mallocator/versioned-api-router) 
+[![Dependency Status](https://david-dm.org/mallocator/versioned-api-router.svg)](https://david-dm.org/mallocator/versioned-api-router)
 
 A router for express that manages api versioning and parameter handling.
 
@@ -10,12 +10,12 @@ A router for express that manages api versioning and parameter handling.
 ## Features
 
 * Parse version from param, path, header, cookie or your own implementation
-* Match version using numbers, regular expression or [semver](https://github.com/npm/node-semver) format 
+* Match version using numbers, regular expression or [semver](https://github.com/npm/node-semver) format
 * Configure your own parameters or headers
-* Respond to requests with the matched version in a custom header 
+* Respond to requests with the matched version in a custom header
 * Checks if all required parameters are set on an endpoint
 * Automatically sets default values for missing parameters
-* Generates a json map of all endpoints for documentation 
+* Generates a json map of all endpoints for documentation
 * Supports nested documents for json POST bodies,
 * Customizable error handler per router and for each endpoint
 
@@ -90,7 +90,7 @@ router.get('/endpoint', {
         name: 'string'
     }
 }, (req, res) => {
-    res.end('hello ' + req.args.name); 
+    res.end('hello ' + req.args.name);
 });
 
 app.use(Router);
@@ -98,15 +98,15 @@ app.use(Router);
 
 With the default configuration this is the output of the different requests to the server:
 
-http://myhost/endpoint => 
+http://myhost/endpoint =>
 ```
 Status Code 422
 ```
 
-http://myhost/endpoint (developer mode) => 
+http://myhost/endpoint (developer mode) =>
 ```
-Status Code 422 
-{ 
+Status Code 422
+{
     "error": "Required parameters are missing",
     "params": {
         "name": {
@@ -119,7 +119,7 @@ Status Code 422
 
 http://myhost/endpoint?name=bob => ```hello bob```
 
-http://myhost/ => 
+http://myhost/ =>
 ```
 Status Code 200
 {
@@ -132,7 +132,7 @@ Status Code 200
                     "required": true,
                     "default": undefined
                 }
-            }            
+            }
         }
     }
 }
@@ -150,11 +150,11 @@ var router = versionRouter({
     header: 'X-ApiVersion',
     responseHeader: 'X-ApiVersion',
     passVersion: false,
-    prefix: '/path'                                     
-    error: (value, req, res, next) => {},                
-    success: (value, req, res, next) => {},             
-    validate: (value, req, res, next) => {},            
-    paramMap: 'arguments',                               
+    prefix: '/path'
+    error: (value, req, res, next) => {},
+    success: (value, req, res, next) => {},
+    validate: (value, req, res, next) => {},
+    paramMap: 'arguments',
     paramOrder: ['params', 'query', 'cookie', 'body', 'header'],
     routerFunction: express.Router
 });
@@ -189,18 +189,18 @@ will respond to.
 
 The path supports all the same options that the standard router does, only caveat is that regular expressions prevent the
 use of path parameters which are disabled in that case (parameter and header methods are still supported though). Instead
-you can make use of the regular expression subset that express has 
-[built in](https://expressjs.com/en/guide/routing.html#route-paths) using strings. 
+you can make use of the regular expression subset that express has
+[built in](https://expressjs.com/en/guide/routing.html#route-paths) using strings.
 
-The version can be either an array or a single instance of either:  
-A number - will match that number exactly   
-A string - will perform [semver](https://github.com/npm/node-semver) matching   
-A regular expression - will match the incoming version against it    
+The version can be either an array or a single instance of either:
+A number - will match that number exactly
+A string - will perform [semver](https://github.com/npm/node-semver) matching
+A regular expression - will match the incoming version against it
 
 The api configuration is complex enough that is has its own section below label **Api Configuration**
 
 Callbacks can be any handlers that are compatible with standard express handlers and as usual you can set multiple
-handlers that will process a request in order. Handlers will receive a req object that now has two additional fields:  
+handlers that will process a request in order. Handlers will receive a req object that now has two additional fields:
 req.incomingVersion - The version that came in on the request
 req.acceptedVersion - The version that the handler has been configured to accept
 
@@ -216,7 +216,7 @@ app.get('/', router.api);
 ```
 
 The api handler supports multiple formats that can be specified either through a get or path paramter named format:
- 
+
 ```
 app.get('/api/:format', router.api);
 // => can respond to e.g. /api/tree or /api?format=tree (which doesn't require the path variable).
@@ -244,13 +244,13 @@ router.route(path)
 This is the same as the original method. Note that versioning is not supported at this time for the route call.
 
 
-### Router.use 
+### Router.use
 ```
 router.use([path], [function, ...] function)
 ```
 
 This is the same as the original method. Note that versioning is not supported at this time for the use call.
-                                                   
+
 
 ### Router.param
 ```
@@ -297,7 +297,7 @@ or a more complex format as an object with more options:
             type: 'string',
             default: 'bob',
             required: false,
-            description: 'The users name'       
+            description: 'The users name'
             min: 3,                                         // min characters for string, min value for number, ignored for boolean
             max: 10,                                        // max characters for string, min value for number, ignored for boolean
             validate: (value, cb) => { cb(err, value); }    // Function to override validation behavior
@@ -308,8 +308,9 @@ or a more complex format as an object with more options:
 }
 ```
 
-Valid types that can be used are: ```bool```, ```number```, ```string```. 
+Valid types that can be used are: ```bool```, ```number```, ```string```.
 Arrays of each type can also be used: ```bool[]```, ```number[]```, ```string[]```.
+In addition there's are special types ```any``` and ```*```, which will be treated as strings.
 
 Support for complex objects is only possible in body requests and is tbd. (no support in this plugin so far)
 

@@ -1,9 +1,9 @@
-var apiVerifier = require('./lib/apiVerifier');
-var express = require('express');
-var Endpoints = require('./lib/endpoints');
-var path = require('path');
-var responder = require('./lib/responder');
-var versionVerifier = require('./lib/versionVerifier');
+const apiVerifier = require('./lib/apiVerifier');
+const express = require('express');
+const Endpoints = require('./lib/endpoints');
+const path = require('path');
+const responder = require('./lib/responder');
+const versionVerifier = require('./lib/versionVerifier');
 
 
 /**
@@ -72,7 +72,7 @@ var versionVerifier = require('./lib/versionVerifier');
  * All supported methods by the express router that need to be proxied.
  * @type {string[]} The method names                       npm
  */
-var methods = [
+const methods = [
     'all', 'get', 'post', 'put', 'head', 'delete', 'options', 'trace', 'copy', 'lock', 'mkcol', 'move',
     'purge', 'propfind', 'proppatch', 'unlock', 'report', 'mkactivity', 'checkout', 'merge', 'm-search', 'notify',
     'subscribe', 'unsubscribe', 'patch', 'search', 'connect'
@@ -240,8 +240,8 @@ function prefixEndpoints(prefix) {
  * @this Context
  */
 function api(req, res) {
-    var url = req.originalUrl;
-    var prefix = url.substr(0, url.lastIndexOf(req.route.path));
+    let url = req.originalUrl;
+    let prefix = url.substr(0, url.lastIndexOf(req.route.path));
     prefix = prefix.substr(0, prefix.lastIndexOf(this.configuration.prefix));
     responder.respond(req, res, prefixEndpoints.call(this, prefix.length ? prefix : this.configuration.prefix));
 }

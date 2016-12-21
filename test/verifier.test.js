@@ -1,10 +1,8 @@
 /* global describe, it, beforeEach, afterEach */
-'use strict';
+const expect = require('chai').expect;
 
-var expect = require('chai').expect;
-
-var Endpoints = require('../lib/endpoints');
-var verifier = require('../lib/apiVerifier');
+const Endpoints = require('../lib/endpoints');
+const verifier = require('../lib/apiVerifier');
 
 
 describe('verifier', () => {
@@ -12,7 +10,7 @@ describe('verifier', () => {
      * @returns {ParamDef}
      */
     function mkParam(type, def, required = true, min, max) {
-        var param = {
+        let param = {
             array: type.endsWith('[]'),
             type: type.replace('[]', ''),
             default: def,
@@ -25,13 +23,13 @@ describe('verifier', () => {
 
     describe('#configure()', () => {
         it('should normalize the configuration parameters', () => {
-            var context = {
+            let context = {
                 endpoints: new Endpoints({param: 'v'}),
                 configuration: {
                     paramOrder: [ 'query' ]
                 }
             };
-            var api = {
+            let api = {
                 description: 'This is a test',
                 params: {
                     name: 'string()',
@@ -87,7 +85,7 @@ describe('verifier', () => {
         });
 
         it('should apply global configuration options to individual endpoints', () => {
-            var context = {
+            let context = {
                 endpoints: new Endpoints({param: 'v'}),
                 configuration: {
                     paramOrder: [ 'query' ],
@@ -96,7 +94,7 @@ describe('verifier', () => {
                     success: 'success method'
                 }
             };
-            var api = {
+            let api = {
                 description: 'This is a test',
                 params: {
                     name: 'string()',
@@ -195,7 +193,7 @@ describe('verifier', () => {
 
     describe('#getParams()', () => {
         it('should return all parameters parsed in the right order', () => {
-            var config = {
+            let config = {
                 paramOrder: ['params', 'query', 'body'],
                 params: {
                     name: {
@@ -206,7 +204,7 @@ describe('verifier', () => {
                     }
                 }
             };
-            var request = {
+            let request = {
                 params: {
                     name: 'Dough'
                 },
@@ -219,7 +217,7 @@ describe('verifier', () => {
                     name: 'Doh'
                 }
             };
-            var response = verifier.getParams(config, request);
+            let response = verifier.getParams(config, request);
             expect(response).to.deep.equal({
                 name: 'Dough',
                 age: 30
@@ -229,12 +227,12 @@ describe('verifier', () => {
 
     describe('#checkParams()', () => {
         it('should not reject an empty parameter list', () => {
-            var config = {
+            let config = {
                 params: {
                     age: mkParam('number')
                 }
             };
-            var errors = verifier.checkParams(config, {});
+            let errors = verifier.checkParams(config, {});
             expect(errors).to.deep.equal({
                 age: {
                     error: "not set",
@@ -244,13 +242,13 @@ describe('verifier', () => {
         });
 
         it('should return an error for each missing parameters', () => {
-            var config = {
+            let config = {
                 params: {
                     age: mkParam('number'),
                     name: mkParam('string')
                 }
             };
-            var errors = verifier.checkParams(config, {});
+            let errors = verifier.checkParams(config, {});
             expect(errors).to.deep.equal({
                 age: {
                     error: "not set",
@@ -264,43 +262,43 @@ describe('verifier', () => {
         });
 
         it('should allow a request with all parameters set to pass', () => {
-            var config = {
+            let config = {
                 params: {
                     age: mkParam('number'),
                     name: mkParam('string')
                 }
             };
-            var params = {
+            let params = {
                 age: 25,
                 name: 'Jauhn Dough'
             };
-            var errors = verifier.checkParams(config, params);
+            let errors = verifier.checkParams(config, params);
             expect(errors).to.deep.equal({});
         });
 
         it('should ignore params that have an empty or non empty default setting', () => {
-            var config = {
+            let config = {
                 params: {
                     age: mkParam('number', 30, false),
                     name: mkParam('string', 'Jauhn Dough', false)
                 }
             };
-            var errors = verifier.checkParams(config, {});
+            let errors = verifier.checkParams(config, {});
             expect(errors).to.deep.equal({});
         });
 
         it('should check that minimum limits are respected', () => {
-            var config = {
+            let config = {
                 params: {
                     age: mkParam('number', undefined, true, 10),
                     name: mkParam('string', undefined, true, 5)
                 }
             };
-            var params = {
+            let params = {
                 age: 9,
                 name: '1234'
             };
-            var errors = verifier.checkParams(config, params);
+            let errors = verifier.checkParams(config, params);
             expect(errors).to.deep.equal({
                 age: {
                     error: "value below min value",
@@ -316,17 +314,17 @@ describe('verifier', () => {
         });
 
         it('should check that maximum limits are respected', () => {
-            var config = {
+            let config = {
                 params: {
                     age: mkParam('number', undefined, true, undefined, 10),
                     name: mkParam('string', undefined, true, undefined, 5)
                 }
             };
-            var params = {
+            let params = {
                 age: 11,
                 name: '123456'
             };
-            var errors = verifier.checkParams(config, params);
+            let errors = verifier.checkParams(config, params);
             expect(errors).to.deep.equal({
                 age: {
                     error: 'value exceeds max value',
@@ -342,22 +340,22 @@ describe('verifier', () => {
         });
 
         it('should be able to use a custom validator', () => {
-            var ageDef = mkParam('number');
+            let ageDef = mkParam('number');
             ageDef.validate = (value, name, config) => {
                 expect(value).to.equal(11);
                 expect(name).to.equal('age');
                 expect(config).to.deep.equal(ageDef);
                 return 'Test error';
             };
-            var config = {
+            let config = {
                 params: {
                     age: ageDef
                 }
             };
-            var params = {
+            let params = {
                 age: 11
             };
-            var errors = verifier.checkParams(config, params);
+            let errors = verifier.checkParams(config, params);
             expect(errors).to.deep.equal({
                 age: {
                     error: 'Test error',
@@ -369,42 +367,42 @@ describe('verifier', () => {
 
     describe('#fillParams()', () => {
         it('should fill parameters with the right primitive types', () => {
-            var config = {
+            let config = {
                 params: {
                     age: mkParam('number', 25),
                     name: mkParam('string', 'Jauhn Dough')
                 }
             };
-            var result = verifier.fillParams(config, {});
+            let result = verifier.fillParams(config, {});
             expect(result.age).to.equal(25);
             expect(result.age).to.not.equal('25');
             expect(result.name).to.equal('Jauhn Dough');
         });
 
         it('should keep empty defaults as undefined', () => {
-            var config = {
+            let config = {
                 params: {
                     age: mkParam('number')
                 }
             };
-            var result = verifier.fillParams(config, {});
+            let result = verifier.fillParams(config, {});
             expect(result).to.deep.equal({
                 age: undefined
             })
         });
 
         it('should only fill parameters that haven\'t been set yet', () => {
-            var config = {
+            let config = {
                 params: {
                     age: mkParam('number', 25),
                     name: mkParam('string', 'Jauhn Dough')
                 }
             };
-            var params = {
+            let params = {
                 name: 'The Narrator',
                 origin: 'unknown'
             };
-            var result = verifier.fillParams(config, params);
+            let result = verifier.fillParams(config, params);
             expect(result).to.deep.equal({
                 name: 'The Narrator',
                 age: 25,
@@ -415,15 +413,15 @@ describe('verifier', () => {
 
     describe('#verify()', () => {
         it('should be able to use a custom error handler', done => {
-            var chain = () => { expect.fail('should have thrown error') };
-            var request = {
+            let chain = () => { expect.fail('should have thrown error') };
+            let request = {
                 route: {
                     path: '/test'
                 },
                 method: 'GET',
                 params: {}
             };
-            var endpoints = new Endpoints({ param: 'v' });
+            let endpoints = new Endpoints({ param: 'v' });
             endpoints.add('/test', 'GET', [ 0 ], {
                 error: (error, req, res, next) => {
                     expect(error).to.be.instanceOf(Error);
@@ -436,8 +434,8 @@ describe('verifier', () => {
                     age: 'number'
                 }
             });
-            var response = {};
-            var context = {
+            let response = {};
+            let context = {
                 globalConfiguration: {
                     paramOrder: [ 'params' ]
                 },
@@ -448,15 +446,15 @@ describe('verifier', () => {
         });
 
         it('should be able to use a custom success handler', done => {
-            var chain = () => {};
-            var request = {
+            let chain = () => {};
+            let request = {
                 route: {
                     path: '/test'
                 },
                 method: 'GET',
                 params: {}
             };
-            var response = {
+            let response = {
                 status: () => response,
                 json: () => response,
                 end: () => response
@@ -475,7 +473,7 @@ describe('verifier', () => {
                     age: 'number'
                 }
             });
-            var context = { endpoints };
+            let context = { endpoints };
             verifier.verify.call(context, request, response, chain);
         });
     });

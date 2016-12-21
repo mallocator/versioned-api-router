@@ -1,17 +1,15 @@
 /* global describe, it, beforeEach, afterEach */
-'use strict';
+const expect = require('chai').expect;
+const express = require('express');
+const request = require('supertest');
 
-var expect = require('chai').expect;
-var express = require('express');
-var request = require('supertest');
-
-var responder = require('../lib/responder');
+const responder = require('../lib/responder');
 
 
 describe('responder', () => {
     describe('#flatten()', () => {
         it('should convert an api response to a flattened table', () => {
-            var response = responder.flatten({
+            let response = responder.flatten({
                 '/test': {
                     'GET': {
                         description: 'This is a test',
@@ -40,7 +38,7 @@ describe('responder', () => {
         });
 
         it('should convert an error response to a flattened table', () => {
-            var response = responder.flatten({
+            let response = responder.flatten({
                 error: 'Required parameters are missing',
                 params: {
                     name: {
@@ -68,7 +66,7 @@ describe('responder', () => {
 
     describe('#formatTable()', () => {
         it('should convert a json object to HTML table', () => {
-            var response = responder.formatTable({
+            let response = responder.formatTable({
                 error: 'This is a test',
                 params: {
                     name: {
@@ -92,7 +90,7 @@ describe('responder', () => {
 
     describe('#formatCSV()', () => {
         it('should convert a json object to CSV', () => {
-            var response = responder.formatCSV({
+            let response = responder.formatCSV({
                 error: 'This is a test',
                 params: {
                     name: {
@@ -112,7 +110,7 @@ describe('responder', () => {
 
     describe('#formatXML()', () => {
         it('should convert a json object to XML', () => {
-            var response = responder.formatXML({
+            let response = responder.formatXML({
                 error: 'This is a test',
                 params: {
                     name: {
@@ -134,21 +132,21 @@ describe('responder', () => {
 
     describe('#respond()', () => {
         it('should respond with an error if an undefined format is selected', done => {
-            var app = express();
+            let app = express();
             app.get('/:format', (req, res) => responder.respond(req, res, { params: {} }));
 
             request(app).get('/unknownFormat').expect(422, 'Invalid format requested').end(done)
         });
 
         it('should return a 204 status if the response is empty', done => {
-            var app = express();
+            let app = express();
             app.get('/:format', (req, res) => responder.respond(req, res, {}));
 
             request(app).get('/any?format=xml').expect(204).end(done)
         });
 
         it('should respond with the api as a textual json tree', done => {
-            var app = express();
+            let app = express();
             app.get('/:format', (req, res) => responder.respond(req, res, {
                 description: 'This is a test',
                 params: {

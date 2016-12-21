@@ -1,15 +1,15 @@
 /* global describe, it, beforeEach, afterEach */
+const async = require('async');
+const expect = require('chai').expect;
+const express = require('express');
+const request = require('supertest');
 
-var async = require('async');
-var expect = require('chai').expect;
-var express = require('express');
-var request = require('supertest');
+const Router = require('..');
 
-var Router = require('..');
 
 describe('Router', () => {
     it('should support both api configuration and versioning in one', done => {
-        var router = Router();
+        let router = Router();
         router.get('/test', 1, {
             params: {
                 var1: 'number',
@@ -17,7 +17,7 @@ describe('Router', () => {
             }
         }, (req, res) => res.end('success'));
 
-        var app = express();
+        let app = express();
         app.use(router);
         async.series([
             cb => request(app).get('/test').expect(404).end(cb),
@@ -27,7 +27,7 @@ describe('Router', () => {
     });
 
     it('should support multiple version with different parameters', done => {
-        var router = Router();
+        let router = Router();
         router.get('/test', 1, {
             params: {
                 var1: 'number',
@@ -52,7 +52,7 @@ describe('Router', () => {
             res.end('success')
         });
 
-        var app = express();
+        let app = express();
         app.use(router);
         async.series([
             cb => request(app).get('/v2/test?var3=25').expect(200, 'success').end(cb),
@@ -61,7 +61,7 @@ describe('Router', () => {
     });
 
     it('should support different version formats', done => {
-        var router = Router();
+        let router = Router();
         router.get('/test', 1, {
             params: {
                 var1: 'number',
@@ -100,7 +100,7 @@ describe('Router', () => {
             res.end('success')
         });
 
-        var app = express();
+        let app = express();
         app.use(router);
         async.series([
             cb => request(app).get('/v1/test?var1=25').expect(200, 'success').end(cb),
@@ -112,12 +112,12 @@ describe('Router', () => {
     });
 
     it('should support requests that respond with delayed responses', done => {
-        var router = Router();
+        let router = Router();
         router.get('/test', (req, res) => {
             setTimeout(() => res.end('success'), 10);
         });
 
-        var app = express();
+        let app = express();
         app.use(router);
         request(app).get('/test').expect(200, 'success').end(done)
     });
