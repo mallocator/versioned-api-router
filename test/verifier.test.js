@@ -173,6 +173,8 @@ describe('verifier', () => {
         it('should allow to set default params', () => {
             expect(verifier.parseParam('string(hello)')).to.deep.equal(mkParam('string', 'hello', false));
             expect(verifier.parseParam('number(20)')).to.deep.equal(mkParam('number', 20, false));
+            expect(verifier.parseParam('number(0)')).to.deep.equal(mkParam('number', 0, false));
+            expect(verifier.parseParam('bool(true)')).to.deep.equal(mkParam('bool', true, false));
             expect(verifier.parseParam('bool(false)')).to.deep.equal(mkParam('bool', false, false));
             expect(verifier.parseParam.bind(null, 'something(someval)')).to.throw(Error);
         });
