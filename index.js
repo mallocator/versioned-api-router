@@ -81,8 +81,8 @@ const methods = [
 const defaultConfig = {
     paramOrder: ['params', 'query', 'cookie', 'body', 'header'],
     param: 'v',
-    header: 'X-ApiVersion',
-    responseHeader: 'X-ApiVersion',
+    header: 'ApiVersion',
+    responseHeader: 'ApiVersion',
     passVersion: true,
     routerFunction: express.Router
 };

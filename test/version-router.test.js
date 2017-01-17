@@ -37,7 +37,7 @@ describe('Version Router', () => {
         app.use(router);
         async.series([
             cb => request(app).get('/test').expect(404).end(cb),
-            cb => request(app).get('/test').set('X-ApiVersion', 1).expect(200, 'success').end(cb)
+            cb => request(app).get('/test').set('ApiVersion', 1).expect(200, 'success').end(cb)
         ], done);
     });
 
