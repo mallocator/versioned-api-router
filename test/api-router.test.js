@@ -37,6 +37,20 @@ describe('Api Router', () => {
         request(app).get('/test?var1=25').expect(200).end(done);
     });
 
+    it('should not throw an error when no params have been configured', done => {
+        let router = Router();
+        let config = {
+            description: 'this is a test',
+            params: {}
+        };
+
+        router.post('/test', 1, config, (req, res) => res.end('success'));
+
+        let app = express();
+        app.use(router);
+        request(app).post('/v1/test').send({param:'val'}).expect(200).end(done);
+    });
+
     it('should make all be able to use parameters from multiple sources', done => {
         let router = Router();
         let config = {
