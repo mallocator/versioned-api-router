@@ -365,6 +365,34 @@ describe('verifier', () => {
                 }
             });
         });
+
+        it('should allow to use arrays for verification', () => {
+            let config = {
+                params: {
+                    age: mkParam('number[]', undefined, true, 10)
+                }
+            };
+
+            let params = { age: 9 };
+            let errors = verifier.checkParams(config, params);
+            expect(errors).to.deep.equal({
+                age: {
+                    error: "value below min value",
+                    min: 10,
+                    type: "number"
+                }
+            });
+
+            let paramsArray = { age: [ 9 ] };
+            let errorsArray = verifier.checkParams(config, paramsArray);
+            expect(errorsArray).to.deep.equal({
+                age: {
+                    error: "value below min value",
+                    min: 10,
+                    type: "number"
+                }
+            });
+        });
     });
 
     describe('#fillParams()', () => {
