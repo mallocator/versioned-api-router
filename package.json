@@ -1,6 +1,6 @@
 {
   "name": "versioned-api-router",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "A router for express that manages api versioning.",
   "license": "Apache-2.0",
   "author": "Ravi Gairola <mallox@pyxzl.net>",
