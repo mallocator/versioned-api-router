@@ -64,11 +64,6 @@ describe('Version Router', () => {
         expect(router.get.bind(() => {})).to.throw(Error);
     });
 
-    it('should prevent me from passing in unsupported parameters', () => {
-        let router = Router();
-        expect(router.get.bind(null, '/test', false)).to.throw(Error);
-    });
-
     it('should be able to support multiple versions for the same endpoint', done => {
         let router = Router();
         router.get('/test', 1, (req, res) => res.end('success 1'));

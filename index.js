@@ -160,6 +160,7 @@ function parseParams(original, method, path, args, config) {
             parseParams(original, method, path, arg, config);
             continue;
         }
+        arg = isNaN(arg) ? arg : parseFloat(arg);
         switch (typeof arg) {
             case 'object':
                 if (arg instanceof RegExp) {
