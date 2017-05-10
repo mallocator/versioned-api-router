@@ -37,6 +37,26 @@ describe('Api Router', () => {
         request(app).get('/test?var1=25').expect(200).end(done);
     });
 
+    it('should recognize falsy values', done => {
+        let router = Router();
+        let config = {
+            params: {
+                var1: 'number',
+                var2: 'boolean'
+            }
+        };
+
+        router.get('/test', config, (req, res) => {
+            expect(req.args.var1).to.equal(0);
+            expect(req.args.var2).to.equal(false);
+            res.end('success');
+        });
+
+        let app = express();
+        app.use(router);
+        request(app).get('/test?var1=0&var2=false').expect(200).end(done);
+    });
+
     it('should not throw an error when no params have been configured', done => {
         let router = Router();
         let config = {
