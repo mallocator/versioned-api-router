@@ -129,6 +129,8 @@ describe('Api Router', () => {
 
         let app = express();
         app.use(router);
+        // suppress error in console
+        app.use((err, req, res, next) => {});
         request(app).get('/test').expect(422, {
             error: 'Required parameters are missing',
             params: {

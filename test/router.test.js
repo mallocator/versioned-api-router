@@ -19,6 +19,8 @@ describe('Router', () => {
 
         let app = express();
         app.use(router);
+        // suppress error in console
+        app.use((err, req, res, next) => {});
         async.series([
             cb => request(app).get('/test').expect(404).end(cb),
             cb => request(app).get('/v1/test').expect(422).end(cb),
