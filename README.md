@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/mallocator/versioned-api-router.svg?branch=master)](https://travis-ci.org/mallocator/versioned-api-router)
 [![Coverage Status](https://coveralls.io/repos/mallocator/versioned-api-router/badge.svg?branch=master&service=github)](https://coveralls.io/github/mallocator/versioned-api-router?branch=master)
 [![Dependency Status](https://david-dm.org/mallocator/versioned-api-router.svg)](https://david-dm.org/mallocator/versioned-api-router)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmallocator%2Fversioned-api-router.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmallocator%2Fversioned-api-router?ref=badge_shield)
 
 A router for express that manages api versioning and parameter handling.
 
@@ -322,3 +323,7 @@ For more examples check out [api-router.test.js](test/api-router.test.js) and [v
 * Overlapping api configuration don't work yet. The plan is to merge overlapping configs and make all params optional.
 * Better formatting for the endpoint call with versions.
 * More test coverage for using both version and api config at the same time.
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmallocator%2Fversioned-api-router.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmallocator%2Fversioned-api-router?ref=badge_large)
